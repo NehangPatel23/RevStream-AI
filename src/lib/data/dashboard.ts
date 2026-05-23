@@ -61,11 +61,14 @@ export const alerts = [
 ] as const;
 
 export const portfolioSeries = [
-  { name: "Mon", revenue: 5.1, occupancy: 72 },
-  { name: "Tue", revenue: 5.8, occupancy: 74 },
-  { name: "Wed", revenue: 5.4, occupancy: 73 },
-  { name: "Thu", revenue: 6.6, occupancy: 77 },
-  { name: "Fri", revenue: 7.1, occupancy: 80 },
-  { name: "Sat", revenue: 7.8, occupancy: 84 },
-  { name: "Sun", revenue: 7.0, occupancy: 81 },
-] as const;
+  { name: "Oct 1", actual: 12200, target: 14850, occupancy: 74 },
+  { name: "Oct 4", actual: 15800, target: 15100, occupancy: 76 },
+  { name: "Oct 8", actual: 16700, target: 15950, occupancy: 78 },
+  { name: "Oct 11", actual: 15100, target: 16300, occupancy: 79 },
+  { name: "Oct 15", actual: 17650, target: 16800, occupancy: 81 },
+  { name: "Oct 18", actual: 18100, target: 17250, occupancy: 82 },
+  { name: "Oct 22", actual: 18800, target: 17900, occupancy: 84 },
+  { name: "Oct 25", actual: 19200, target: 18300, occupancy: 85 },
+  { name: "Oct 29", actual: 18750, target: 18850, occupancy: 86 },
+  { name: "Nov 1", actual: 17100, target: 19200, occupancy: 87 },
+];

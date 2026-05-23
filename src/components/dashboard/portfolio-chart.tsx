@@ -4,38 +4,185 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
+  YAxis,
 } from "recharts";
 
 type Point = {
   name: string;
-  revenue: number;
-  occupancy: number;
+  actual?: number;
+  target?: number;
+  revenue?: number;
+  occupancy?: number;
 };
 
-export function PortfolioChart({ data }: { data: readonly Point[] }) {
+type PortfolioTooltipProps = {
+  active?: boolean;
+  label?: string | number;
+  payload?: Array<{
+    dataKey?: string;
+    value?: number;
+  }>;
+};
+
+function formatCurrency(value: number) {
+  return `$${value.toLocaleString("en-US")}`;
+}
+
+function PortfolioTooltip({ active, payload, label }: PortfolioTooltipProps) {
+  if (!active || !payload?.length) return null;
+
+  const actual =
+    payload.find((item) => item.dataKey === "actual")?.value ??
+    payload.find((item) => item.dataKey === "revenue")?.value;
+
+  const target = payload.find((item) => item.dataKey === "target")?.value;
+  const occupancy = payload.find((item) => item.dataKey === "occupancy")?.value;
+
+  if (typeof actual !== "number") return null;
+
+  const variance =
+    typeof target === "number" && target > 0 ? ((actual - target) / target) * 100 : null;
+
   return (
-    <div className="h-55 min-h-55 min-w-0 w-full">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
-        <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="#e0e3e5" strokeDasharray="4 4" />
-          <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="#737784" />
-          <Tooltip
-            contentStyle={{
-              background: "#ffffff",
-              border: "1px solid #c3c6d5",
-              borderRadius: "12px",
-              color: "#191c1e",
-            }}
+    <div className="min-w-70 rounded-[14px] border border-[#c3c6d5] bg-white p-4 shadow-[0_12px_32px_rgba(0,0,0,0.14)]">
+      <div className="text-[13px] font-semibold text-[#191c1e]">{label}</div>
+
+      <div className="mt-3 space-y-2 text-[13px]">
+        <div className="flex items-center justify-between gap-4">
+          <span className="inline-flex items-center gap-2 text-[#434653]">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#003c90]" />
+            Actual ADR
+          </span>
+          <span className="font-semibold text-[#191c1e]">{formatCurrency(actual)}</span>
+        </div>
+
+        {typeof target === "number" ? (
+          <div className="flex items-center justify-between gap-4">
+            <span className="inline-flex items-center gap-2 text-[#434653]">
+              <span className="h-0.5 w-3 rounded-full bg-[#b9bfd0]" />
+              Target ADR
+            </span>
+            <span className="font-semibold text-[#191c1e]">{formatCurrency(target)}</span>
+          </div>
+        ) : null}
+
+        {variance !== null ? (
+          <div className="flex items-center justify-between gap-4 pt-1">
+            <span className="text-[#434653]">Variance</span>
+            <span className={`font-semibold ${variance >= 0 ? "text-[#1f9d55]" : "text-[#d93025]"}`}>
+              {variance >= 0 ? "+" : ""}
+              {variance.toFixed(1)}%
+            </span>
+          </div>
+        ) : null}
+
+        {typeof occupancy === "number" ? (
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[#434653]">Occupancy</span>
+            <span className="font-semibold text-[#191c1e]">{occupancy}%</span>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function PortfolioChart({ data }: { data: readonly Point[] }) {
+  const chartData = data.map((point) => {
+    const actual = point.actual ?? point.revenue ?? 0;
+    return {
+      ...point,
+      actual,
+      target: point.target ?? Math.max(0, actual - 18),
+    };
+  });
+
+  return (
+    <div className="h-115 w-full min-w-0 overflow-visible">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={460}>
+        <AreaChart
+          data={chartData}
+          margin={{ top: 18, right: 24, left: 24, bottom: 34 }}
+        >
+          <defs>
+            <linearGradient id="portfolioArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#003c90" stopOpacity={0.26} />
+              <stop offset="55%" stopColor="#003c90" stopOpacity={0.12} />
+              <stop offset="100%" stopColor="#003c90" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid stroke="#e7ebf0" strokeDasharray="0" vertical={false} />
+
+          <XAxis
+            dataKey="name"
+            tickLine={false}
+            axisLine={false}
+            stroke="#737784"
+            interval="preserveStartEnd"
+            minTickGap={22}
+            tickMargin={12}
+            height={42}
+            padding={{ left: 18, right: 18 }}
           />
+
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            stroke="#737784"
+            width={70}
+            tickMargin={12}
+            tickFormatter={(value) => `$${value}`}
+          />
+
+          <Tooltip
+            content={<PortfolioTooltip />}
+            cursor={{
+              stroke: "#003c90",
+              strokeOpacity: 0.12,
+              strokeWidth: 1,
+            }}
+            wrapperStyle={{ outline: "none" }}
+          />
+
           <Area
-            type="monotone"
-            dataKey="revenue"
+            type="linear"
+            dataKey="actual"
             stroke="#003c90"
-            fill="rgba(0, 60, 144, 0.12)"
-            strokeWidth={2}
+            strokeWidth={3}
+            fill="url(#portfolioArea)"
+            dot={false}
+            activeDot={{
+              r: 5,
+              fill: "#003c90",
+              stroke: "#ffffff",
+              strokeWidth: 2,
+            }}
+            isAnimationActive
+            animationDuration={500}
+            animationEasing="ease-out"
+          />
+
+          <Line
+            type="linear"
+            dataKey="target"
+            stroke="#b9bfd0"
+            strokeWidth={2.5}
+            dot={false}
+            strokeDasharray="5 5"
+            activeDot={{
+              r: 4,
+              fill: "#b9bfd0",
+              stroke: "#ffffff",
+              strokeWidth: 2,
+            }}
+            isAnimationActive
+            animationDuration={500}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>

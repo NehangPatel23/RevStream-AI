@@ -53,7 +53,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <aside
         className={cn(
           "hidden h-screen shrink-0 flex-col border-r border-[#e0e3e5] bg-[#eceef0] transition-all duration-200 md:flex",
-          collapsed ? "w-[96px]" : "w-[280px]"
+          collapsed ? "w-24" : "w-70"
         )}
       >
         <div className="flex items-start justify-between gap-3 px-6 pt-8">
@@ -64,10 +64,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
             {!collapsed && (
               <div className="pt-0.5">
-                <div className="text-[24px] font-semibold leading-[32px] tracking-[-0.01em] text-[#003c90]">
+                <div className="text-[24px] font-semibold leading-8 tracking-[-0.01em] text-[#003c90]">
                   RevStream AI
                 </div>
-                <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#434653]">
+                <div className="text-[12px] font-semibold uppercase tracking-wider text-[#434653]">
                   Enterprise Tier
                 </div>
               </div>
@@ -107,7 +107,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   className={cn("text-[22px]", active ? "text-[#003c90]" : "text-[#54647a]")}
                 />
                 {!collapsed && (
-                  <span className="text-[12px] font-semibold uppercase tracking-[0.05em]">
+                  <span className="text-[12px] font-semibold uppercase tracking-wider">
                     {item.label}
                   </span>
                 )}
@@ -118,8 +118,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         {!collapsed && (
           <div className="border-t border-[#e0e3e5] px-6 py-6">
-            <div className="rounded-[16px] bg-white px-4 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-              <div className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#434653]">
+            <div className="rounded-2xl bg-white px-4 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+              <div className="text-[12px] font-semibold uppercase tracking-wider text-[#434653]">
                 Portfolio Summary
               </div>
               <div className="mt-3 flex items-end justify-between">
@@ -139,17 +139,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-[72px] items-center justify-between border-b border-[#c3c6d5] bg-[#f8fafc] px-6 md:px-8">
+        <header className="flex h-18 items-center justify-between border-b border-[#c3c6d5] bg-[#f8fafc] px-6 md:px-8">
           <div className="flex flex-1 items-center gap-3">
             <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#434653] hover:bg-[#eceef0] md:hidden">
               <Menu className="h-5 w-5" />
             </button>
 
-            <div className="relative w-full max-w-[480px]">
+            <div className="relative w-full max-w-120">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#434653]" />
               <input
                 placeholder="Search properties, markets, or alerts..."
-                className="h-[44px] w-full rounded-[10px] border border-[#c3c6d5] bg-white pl-12 pr-4 text-[16px] text-[#191c1e] outline-none placeholder:text-[#434653] focus:border-[#003c90]"
+                className="h-11 w-full rounded-[10px] border border-[#c3c6d5] bg-white pl-12 pr-4 text-[16px] text-[#191c1e] outline-none placeholder:text-[#434653] focus:border-[#003c90]"
               />
             </div>
           </div>
@@ -157,7 +157,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-5">
             <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-[#191c1e] hover:bg-[#eceef0]">
               <Icon name="notifications" className="text-[24px]" />
-              <span className="absolute right-[11px] top-[11px] h-2 w-2 rounded-full bg-[#ba1a1a]" />
+              <span className="absolute right-2.75 top-2.75 h-2 w-2 rounded-full bg-[#ba1a1a]" />
             </button>
             <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#191c1e] hover:bg-[#eceef0]">
               <Icon name="account_circle" className="text-[24px]" />
@@ -166,7 +166,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="min-w-0 flex-1 overflow-y-auto px-6 py-8 md:px-8">
-          <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8">{children}</div>
+          <div className="mx-auto flex w-full max-w-370 flex-col gap-8">{children}</div>
         </main>
       </div>
     </div>
