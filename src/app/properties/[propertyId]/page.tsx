@@ -10,10 +10,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { appToast } from "@/lib/toast";
 import {
   Area,
   AreaChart,
@@ -24,6 +20,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { appToast } from "@/lib/toast";
+import { Drawer } from "@/components/ui/drawer";
+import { DayDetailDrawer } from "@/components/property-detail/day-detail-drawer";
 
 type TabKey = "Overview" | "Calendar" | "Competitors" | "Rules";
 type RangeKey = "Last 7 Days" | "Last 14 Days" | "Last 30 Days";
@@ -34,6 +36,11 @@ type TrendPoint = {
   label: string;
   actual: number;
   target: number;
+  occupancy: number;
+  note: string;
+  drivers: string[];
+  confidence: number;
+  compSet: string;
 };
 
 type MetricCardData = {
@@ -85,17 +92,13 @@ type Competitor = {
   rate: string;
   occupancy: string;
   position: string;
+  note: string;
 };
 
 type ConfirmAction =
   | { kind: "delete-rule"; ruleId: string }
   | { kind: "apply-recommendation" }
   | null;
-
-type CalendarLegendItem = {
-  label: string;
-  swatchClass: string;
-};
 
 const tabs: TabKey[] = ["Overview", "Calendar", "Competitors", "Rules"];
 const rangeOptions: RangeKey[] = ["Last 7 Days", "Last 14 Days", "Last 30 Days"];
@@ -128,16 +131,106 @@ const metrics: MetricCardData[] = [
 ];
 
 const trendData: TrendPoint[] = [
-  { label: "Oct 1", actual: 152, target: 148 },
-  { label: "Oct 4", actual: 154, target: 149 },
-  { label: "Oct 8", actual: 164, target: 153 },
-  { label: "Oct 11", actual: 166, target: 156 },
-  { label: "Oct 15", actual: 163, target: 159 },
-  { label: "Oct 18", actual: 171, target: 161 },
-  { label: "Oct 22", actual: 176, target: 164 },
-  { label: "Oct 25", actual: 172, target: 166 },
-  { label: "Oct 29", actual: 182, target: 168 },
-  { label: "Nov 1", actual: 184, target: 169 },
+  {
+    label: "Oct 1",
+    actual: 152,
+    target: 148,
+    occupancy: 75,
+    note: "Early month pickup tracked steadily above baseline.",
+    drivers: ["Weekend demand held", "Search volume was steady"],
+    confidence: 78,
+    compSet: "Comps were close to target with a narrow spread.",
+  },
+  {
+    label: "Oct 4",
+    actual: 154,
+    target: 149,
+    occupancy: 76,
+    note: "Small lift came from a stronger midweek conversion rate.",
+    drivers: ["Lead-time inquiries improved", "No comp discounting pressure"],
+    confidence: 80,
+    compSet: "One nearby comp lowered rates slightly.",
+  },
+  {
+    label: "Oct 8",
+    actual: 164,
+    target: 153,
+    occupancy: 78,
+    note: "The market started tightening ahead of the event window.",
+    drivers: ["Short-lead demand", "Weekend search growth"],
+    confidence: 84,
+    compSet: "Direct comps began moving up.",
+  },
+  {
+    label: "Oct 11",
+    actual: 166,
+    target: 156,
+    occupancy: 79,
+    note: "Rate lift continued without hurting occupancy.",
+    drivers: ["Strong booking pace", "Limited supply"],
+    confidence: 86,
+    compSet: "Two comps now price above current ADR.",
+  },
+  {
+    label: "Oct 15",
+    actual: 163,
+    target: 159,
+    occupancy: 81,
+    note: "A brief slowdown kept the recommendation conservative.",
+    drivers: ["Lead window widened", "Weekend fill remained healthy"],
+    confidence: 82,
+    compSet: "Spread across comps remained stable.",
+  },
+  {
+    label: "Oct 18",
+    actual: 171,
+    target: 161,
+    occupancy: 82,
+    note: "Booking pace accelerated into the event cluster.",
+    drivers: ["Event spillover", "Strong short-stay intent"],
+    confidence: 88,
+    compSet: "Comp-set lifted rates in tandem.",
+  },
+  {
+    label: "Oct 22",
+    actual: 176,
+    target: 164,
+    occupancy: 84,
+    note: "Demand was strong enough to support a premium.",
+    drivers: ["High-intent search traffic", "Weekend compression"],
+    confidence: 91,
+    compSet: "Most comps were already above target.",
+  },
+  {
+    label: "Oct 25",
+    actual: 172,
+    target: 166,
+    occupancy: 85,
+    note: "The market stayed firm while occupancy stayed healthy.",
+    drivers: ["Weekend demand", "Comp-set stayed elevated"],
+    confidence: 89,
+    compSet: "No signs of rate resistance yet.",
+  },
+  {
+    label: "Oct 29",
+    actual: 182,
+    target: 168,
+    occupancy: 86,
+    note: "Late-month demand spike strengthened pricing power.",
+    drivers: ["Event concentration", "Low remaining supply"],
+    confidence: 93,
+    compSet: "Direct comps were well above baseline.",
+  },
+  {
+    label: "Nov 1",
+    actual: 184,
+    target: 169,
+    occupancy: 87,
+    note: "Strong close to the month with healthy conversion.",
+    drivers: ["Holiday overlap", "Search velocity remained high"],
+    confidence: 94,
+    compSet: "The comp-set spread widened further.",
+  },
 ];
 
 const baseRules: RuleItem[] = [
@@ -165,10 +258,34 @@ const baseRules: RuleItem[] = [
 ];
 
 const competitors: Competitor[] = [
-  { name: "Bayfront Loft", rate: "$490", occupancy: "89%", position: "Above you" },
-  { name: "Ocean View Residence", rate: "$505", occupancy: "86%", position: "Above you" },
-  { name: "Your Listing", rate: "$425", occupancy: "82%", position: "Current" },
-  { name: "South Beach Suite", rate: "$408", occupancy: "79%", position: "Below you" },
+  {
+    name: "Bayfront Loft",
+    rate: "$490",
+    occupancy: "89%",
+    position: "Above you",
+    note: "Prized view corridor and high weekend fill.",
+  },
+  {
+    name: "Ocean View Residence",
+    rate: "$505",
+    occupancy: "86%",
+    position: "Above you",
+    note: "Strong event-premium behavior on short lead dates.",
+  },
+  {
+    name: "Your Listing",
+    rate: "$425",
+    occupancy: "82%",
+    position: "Current",
+    note: "Good pace, but still room for lift on peak nights.",
+  },
+  {
+    name: "South Beach Suite",
+    rate: "$408",
+    occupancy: "79%",
+    position: "Below you",
+    note: "Softer comp with some weekday discounting.",
+  },
 ];
 
 const baseCalendarDays: CalendarSeedDay[] = [
@@ -197,16 +314,20 @@ const baseCalendarDays: CalendarSeedDay[] = [
   { dayOfMonth: 23, rate: 412, occupancy: 81 },
   { dayOfMonth: 24, rate: 418, occupancy: 82, hasEvent: true },
   { dayOfMonth: 25, rate: 424, occupancy: 83 },
-  { dayOfMonth: 26, rate: 448, occupancy: 88, hasEvent: false, isBooked: true },
+  { dayOfMonth: 26, rate: 448, occupancy: 88, isBooked: true },
   { dayOfMonth: 27, rate: 460, occupancy: 90, hasEvent: true },
   { dayOfMonth: 28, rate: 446, occupancy: 86 },
   { dayOfMonth: 29, rate: 418, occupancy: 81 },
-  { dayOfMonth: 30, rate: 420, occupancy: 82, hasEvent: true, isBooked: false },
+  { dayOfMonth: 30, rate: 420, occupancy: 82, hasEvent: true },
   { dayOfMonth: 31, rate: 430, occupancy: 83 },
 ];
 
 function Icon({ name, className = "" }: { name: string; className?: string }) {
   return <span className={`material-symbols-outlined ${className}`}>{name}</span>;
+}
+
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
 }
 
 function formatCurrency(value: number) {
@@ -436,9 +557,89 @@ function getDateContext(day: CalendarDay) {
   };
 }
 
+function downloadTextFile(filename: string, mimeType: string, contents: string) {
+  const blob = new Blob([contents], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function escapeCsv(value: string) {
+  if (/[,"\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function buildCsv(rows: string[][]) {
+  return rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+}
+
+function escapePdfText(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function buildSimplePdf(lines: string[]) {
+  const body = [
+    "BT",
+    "/F1 15 Tf",
+    "72 760 Td",
+    `(${escapePdfText(lines[0] ?? "RevStream AI Report")}) Tj`,
+    "/F1 11 Tf",
+    ...lines.slice(1).flatMap((line) => [`0 -22 Td`, `(${escapePdfText(line)}) Tj`]),
+    "ET",
+  ].join("\n");
+
+  const pdfParts: string[] = [];
+  const offsets: number[] = [0];
+
+  const push = (chunk: string) => {
+    pdfParts.push(chunk);
+  };
+
+  push("%PDF-1.4\n");
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    `5 0 obj\n<< /Length ${body.length} >>\nstream\n${body}\nendstream\nendobj\n`,
+  ];
+
+  for (const object of objects) {
+    offsets.push(pdfParts.join("").length);
+    push(object);
+  }
+
+  const xrefStart = pdfParts.join("").length;
+  const xref = [
+    "xref",
+    "0 6",
+    "0000000000 65535 f ",
+    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n `),
+    "trailer",
+    "<< /Size 6 /Root 1 0 R >>",
+    "startxref",
+    `${xrefStart}`,
+    "%%EOF",
+  ].join("\n");
+
+  push(xref);
+  return pdfParts.join("");
+}
+
 function MetricCard({ metric }: { metric: MetricCardData }) {
   return (
-    <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+    <button
+      type="button"
+      className="group rounded-[18px] border border-[#e0e3e5] bg-white p-6 text-left shadow-[0_4px_10px_rgba(0,0,0,0.05)] transition hover:-translate-y-px hover:shadow-[0_8px_18px_rgba(0,0,0,0.08)] focus:outline-none focus:ring-2 focus:ring-[#003c90]"
+      onClick={() => appToast.message({ title: metric.title, description: metric.insight })}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="text-[15px] font-semibold uppercase tracking-[0.11em] text-[#434653]">
           {metric.title}
@@ -451,9 +652,10 @@ function MetricCard({ metric }: { metric: MetricCardData }) {
       </div>
 
       <div
-        className={`mt-2 flex items-center gap-2 text-[15px] leading-5.5 ${
+        className={cx(
+          "mt-2 flex items-center gap-2 text-[15px] leading-5.5",
           metric.tone === "red" ? "text-[#ba1a1a]" : "text-[#1d59c1]"
-        }`}
+        )}
       >
         <Icon
           name={metric.tone === "red" ? "trending_down" : "trending_up"}
@@ -463,7 +665,7 @@ function MetricCard({ metric }: { metric: MetricCardData }) {
       </div>
 
       <div className="mt-3 text-[13px] leading-5 text-[#434653]">{metric.insight}</div>
-    </div>
+    </button>
   );
 }
 
@@ -481,36 +683,66 @@ function ChartTooltip({
   const actual = payload.find((item) => item.dataKey === "actual")?.value;
   const target = payload.find((item) => item.dataKey === "target")?.value;
 
+  const percentDelta =
+    typeof actual === "number" && typeof target === "number"
+      ? (((actual - target) / target) * 100).toFixed(1)
+      : null;
+
+  const isIncrease =
+    typeof actual === "number" &&
+    typeof target === "number" &&
+    actual >= target;
+
   return (
-    <div className="rounded-xl border border-[#c3c6d5] bg-white p-3 shadow-[0_4px_10px_rgba(0,0,0,0.08)]">
-      <div className="text-[13px] font-semibold text-[#191c1e]">{label}</div>
-      <div className="mt-2 space-y-1 text-[13px]">
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[#434653]">Actual ADR</span>
-          <span className="font-semibold text-[#003c90]">
+    <div className="min-w-[220px] rounded-[16px] border border-[#e0e3e5] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="text-[14px] font-semibold text-[#191c1e]">
+        {label}
+      </div>
+
+      <div className="mt-4 space-y-4">
+        <div className="flex items-center justify-between gap-5">
+          <div className="flex items-center gap-3">
+            <span className="h-[3px] w-5 rounded-full bg-[#003c90]" />
+            <span className="text-[14px] font-medium text-[#434653]">
+              Actual ADR
+            </span>
+          </div>
+
+          <span className="text-[14px] font-semibold text-[#191c1e]">
             {typeof actual === "number" ? formatCurrency(actual) : "—"}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[#434653]">Target ADR</span>
-          <span className="font-semibold text-[#737784]">
+
+        <div className="flex items-center justify-between gap-5">
+          <div className="flex items-center gap-3">
+            <span className="h-[3px] w-5 rounded-full border-t-2 border-dashed border-[#b8beca]" />
+            <span className="text-[14px] font-medium text-[#434653]">
+              Target ADR
+            </span>
+          </div>
+
+          <span className="text-[14px] font-semibold text-[#191c1e]">
             {typeof target === "number" ? formatCurrency(target) : "—"}
           </span>
         </div>
-        {typeof actual === "number" && typeof target === "number" ? (
-          <div className="pt-1 text-[12px]">
-            <span
-              className={
-                actual >= target ? "font-semibold text-[#188038]" : "font-semibold text-[#ba1a1a]"
-              }
-            >
-              {actual >= target
-                ? `+${(((actual - target) / target) * 100).toFixed(1)}% above target`
-                : `${(((target - actual) / target) * 100).toFixed(1)}% below target`}
-            </span>
-          </div>
-        ) : null}
       </div>
+
+      {percentDelta ? (
+        <div className="mt-5 flex items-center justify-between gap-4">
+          <span className="text-[14px] font-medium text-[#434653]">
+            Variance
+          </span>
+
+          <span
+            className={`text-[14px] font-semibold ${
+              isIncrease ? "text-[#27835d]" : "text-[#ba1a1a]"
+            }`}
+          >
+            {isIncrease ? "+" : ""}
+            {percentDelta}%
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -522,6 +754,7 @@ function TrendChart({
   onSelectRange,
   isRangeOpen,
   onCloseRange,
+  onPointClick,
 }: {
   data: TrendPoint[];
   rangeLabel: RangeKey;
@@ -529,6 +762,7 @@ function TrendChart({
   onSelectRange: (value: RangeKey) => void;
   isRangeOpen: boolean;
   onCloseRange: () => void;
+  onPointClick: (point: TrendPoint) => void;
 }) {
   const rangeRef = useRef<HTMLDivElement | null>(null);
 
@@ -544,9 +778,9 @@ function TrendChart({
   }, [onCloseRange]);
 
   return (
-    <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-      <div className="flex items-start justify-between gap-6">
-        <div>
+    <div className="self-start overflow-hidden rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-[560px] min-w-0">
           <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
             Performance Trends
           </h2>
@@ -555,23 +789,24 @@ function TrendChart({
           </p>
         </div>
 
-        <div className="flex items-center gap-4 text-[14px] font-medium text-[#434653]">
-          <span className="inline-flex items-center gap-2">
-            <span className="h-0.5 w-3 border-t-2 border-solid border-[#003c90]" />
-            Actual ADR
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="h-0.5 w-3 border-t-2 border-dashed border-[#c3c6d5]" />
-            Target ADR
+        <div className="flex shrink-0 items-center gap-6 whitespace-nowrap" ref={rangeRef} data-range-dropdown>
+          <span className="inline-flex items-center gap-2 whitespace-nowrap text-[14px] font-medium text-[#434653]">
+            <span className="h-0.5 w-3 shrink-0 border-t-2 border-solid border-[#003c90]" />
+            <span>Actual ADR</span>
           </span>
 
-          <div ref={rangeRef} className="relative z-20" data-range-dropdown>
+          <span className="inline-flex items-center gap-2 whitespace-nowrap text-[14px] font-medium text-[#434653]">
+            <span className="h-0.5 w-3 shrink-0 border-t-2 border-dashed border-[#c3c6d5]" />
+            <span>Target ADR</span>
+          </span>
+
+          <div className="relative">
             <button
               type="button"
               onClick={onToggleRange}
-              className="inline-flex items-center gap-2 rounded-[10px] bg-[#f2f4f6] px-4 py-2 text-[14px] text-[#191c1e]"
+              className="inline-flex min-w-[170px] items-center justify-between rounded-[12px] bg-[#f2f4f6] px-4 py-2.5 text-[14px] font-medium text-[#191c1e]"
             >
-              {rangeLabel}
+              <span>{rangeLabel}</span>
               <Icon name="expand_more" className="text-[18px]" />
             </button>
 
@@ -595,12 +830,9 @@ function TrendChart({
         </div>
       </div>
 
-      <div className="mt-6 h-80 min-w-0">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={320}>
-          <AreaChart
-            data={data}
-            margin={{ top: 8, right: 16, bottom: 0, left: 12 }}
-          >
+      <div className="mt-5 h-[300px] min-w-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 12 }}>
             <defs>
               <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#003c90" stopOpacity={0.28} />
@@ -637,6 +869,10 @@ function TrendChart({
               fill="url(#actualGradient)"
               dot={false}
               activeDot={{ r: 4 }}
+              onClick={(state: unknown) => {
+                const chartState = state as { payload?: TrendPoint };
+                if (chartState.payload) onPointClick(chartState.payload);
+              }}
             />
             <Line
               type="linear"
@@ -784,7 +1020,7 @@ function RuleItemRow({
   onToggle: (id: string) => void;
   onEdit: (rule: RuleItem) => void;
   onDelete: (id: string) => void;
-  onDragStart: (id: string, event: ReactDragEvent<HTMLButtonElement>) => void;
+  onDragStart: (id: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   onDragEnter: (id: string) => void;
   onDragOver: (e: ReactDragEvent<HTMLDivElement>) => void;
@@ -820,17 +1056,27 @@ function RuleItemRow({
         tabIndex={0}
         role="group"
         aria-label={`Rule ${rule.name}`}
-        onKeyDown={handleRowKeyDown}
-        className={[
-          "group relative rounded-[14px] border border-[#e0e3e5] bg-[#f2f4f6] p-4 outline-none transition-all duration-200 focus:ring-2 focus:ring-[#c3d5f7]",
-          dragging
-            ? "z-20 -translate-y-1 scale-[1.01] cursor-grabbing border-[#c3d5f7] shadow-[0_16px_36px_rgba(0,0,0,0.14)] ring-1 ring-[#d0e1fb]"
-            : "shadow-none",
-          canDrop ? "ring-1 ring-[#d0e1fb]" : "",
-        ].join(" ")}
+        draggable
+        onDragStart={(event) => {
+          onDragStart(rule.id, event);
+          event.dataTransfer.effectAllowed = "move";
+
+          const element = event.currentTarget as HTMLDivElement;
+          event.dataTransfer.setDragImage(element, element.offsetWidth / 2, element.offsetHeight / 2);
+        }}
+        onDragEnd={onDragEnd}
         onDragEnter={() => onDragEnter(rule.id)}
         onDragOver={onDragOver}
         onDrop={() => onDrop(rule.id)}
+        onKeyDown={handleRowKeyDown}
+        className={[
+          "group relative rounded-[14px] border border-[#e0e3e5] bg-[#f2f4f6] p-4 outline-none transition-all duration-200 focus:ring-2 focus:ring-[#c3d5f7]",
+          "cursor-grab active:cursor-grabbing",
+          dragging
+            ? "z-20 scale-[1.01] border-[#c3d5f7] shadow-[0_16px_36px_rgba(0,0,0,0.14)] ring-1 ring-[#d0e1fb]"
+            : "shadow-none",
+          canDrop ? "ring-1 ring-[#d0e1fb]" : "",
+        ].join(" ")}
       >
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-start gap-4">
@@ -849,17 +1095,13 @@ function RuleItemRow({
               />
             </button>
 
-            <button
-              type="button"
-              draggable
-              onDragStart={(event) => onDragStart(rule.id, event)}
-              onDragEnd={onDragEnd}
-              className="inline-flex h-5 w-5 cursor-grab items-center justify-center rounded-full bg-white/45 text-[#737784] opacity-0 backdrop-blur-[2px] transition hover:bg-white/75 hover:opacity-100 group-hover:opacity-100 active:cursor-grabbing"
-              aria-label={`Drag ${rule.name} to reorder`}
+            <div
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/45 text-[#737784] backdrop-blur-[2px]"
+              aria-hidden="true"
               title="Drag to reorder"
             >
               <Icon name="drag_indicator" className="text-[10px]" />
-            </button>
+            </div>
           </div>
 
           <div className="min-w-0 flex-1 pr-12">
@@ -906,14 +1148,14 @@ function RuleItemRow({
         </div>
 
         {showDropLine ? (
-          <div className="pointer-events-none absolute -bottom-2 left-4 right-4 h-0.5 rounded-full bg-[#003c90]" />
+          <div className="pointer-events-none absolute -top-2 left-4 right-4 h-0.5 rounded-full bg-[#003c90]" />
         ) : null}
       </div>
     </div>
   );
 }
 
-function RuleModal({
+function RuleEditorDrawer({
   open,
   title,
   form,
@@ -931,74 +1173,15 @@ function RuleModal({
   if (!open || !form) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 px-4 py-6">
-      <div className="w-full max-w-155 rounded-[20px] border border-[#e0e3e5] bg-white p-6 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-[24px] font-semibold leading-8 tracking-[-0.02em] text-[#191c1e]">
-              {title}
-            </h3>
-            <p className="mt-1 text-[14px] leading-5.5 text-[#434653]">
-              Update the rule name, description, and status.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#434653] hover:bg-[#f2f4f6]"
-            aria-label="Close modal"
-          >
-            <Icon name="close" className="text-[22px]" />
-          </button>
-        </div>
-
-        <div className="mt-5 space-y-4">
-          <div>
-            <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-              Rule Name
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => onChange({ ...form, name: e.target.value })}
-              className="mt-2 h-11 w-full rounded-[10px] border border-[#c3c6d5] bg-white px-3 text-[14px] text-[#191c1e] outline-none focus:border-[#003c90]"
-              placeholder="Weekend Premium"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-              Description
-            </label>
-            <textarea
-              value={form.description}
-              onChange={(e) => onChange({ ...form, description: e.target.value })}
-              className="mt-2 min-h-27.5 w-full rounded-[10px] border border-[#c3c6d5] bg-white px-3 py-3 text-[14px] text-[#191c1e] outline-none focus:border-[#003c90]"
-              placeholder="Describe when this rule should apply..."
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onChange({ ...form, active: !form.active })}
-            className="flex items-center gap-3 text-[14px] font-medium text-[#191c1e]"
-          >
-            <span
-              className={`inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ${
-                form.active ? "bg-[#003c90]" : "bg-[#cbd5e1]"
-              }`}
-            >
-              <span
-                className={`h-4 w-4 rounded-full bg-white transition ${
-                  form.active ? "translate-x-4" : "translate-x-0"
-                }`}
-              />
-            </span>
-            Active
-          </button>
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-2">
+    <Drawer
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={title}
+      description="Update the rule name, description, and status."
+      footer={
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
@@ -1014,26 +1197,101 @@ function RuleModal({
             Save
           </button>
         </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+            Rule Name
+          </label>
+          <input
+            value={form.name}
+            onChange={(e) => onChange({ ...form, name: e.target.value })}
+            className="mt-2 h-11 w-full rounded-[10px] border border-[#c3c6d5] bg-white px-3 text-[14px] text-[#191c1e] outline-none focus:border-[#003c90]"
+            placeholder="Weekend Premium"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+            Description
+          </label>
+          <textarea
+            value={form.description}
+            onChange={(e) => onChange({ ...form, description: e.target.value })}
+            className="mt-2 min-h-27.5 w-full rounded-[10px] border border-[#c3c6d5] bg-white px-3 py-3 text-[14px] text-[#191c1e] outline-none focus:border-[#003c90]"
+            placeholder="Describe when this rule should apply..."
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onChange({ ...form, active: !form.active })}
+          className="flex items-center gap-3 text-[14px] font-medium text-[#191c1e]"
+        >
+          <span
+            className={`inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ${
+              form.active ? "bg-[#003c90]" : "bg-[#cbd5e1]"
+            }`}
+          >
+            <span
+              className={`h-4 w-4 rounded-full bg-white transition ${
+                form.active ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </span>
+          Active
+        </button>
       </div>
-    </div>
+    </Drawer>
   );
 }
 
-function createDragPreview(source: HTMLElement) {
-  const rect = source.getBoundingClientRect();
-  const preview = source.cloneNode(true) as HTMLElement;
+function createRecommendationInsight(point: TrendPoint) {
+  const trendBeat = point.actual >= point.target ? "above target" : "below target";
+  const delta = Math.abs(((point.actual - point.target) / point.target) * 100).toFixed(1);
 
-  preview.style.width = `${rect.width}px`;
-  preview.style.position = "fixed";
-  preview.style.top = "-1000px";
-  preview.style.left = "-1000px";
-  preview.style.pointerEvents = "none";
-  preview.style.transform = "rotate(-1deg) scale(1.01)";
-  preview.style.boxShadow = "0 16px 36px rgba(0,0,0,0.14)";
-  preview.style.opacity = "0.98";
+  return {
+    title: `Why ${point.label} moved`,
+    subtitle: "Trend point drilldown",
+    confidence: `${point.confidence}% confidence`,
+    rationale: `${point.label} finished ${trendBeat} and booked at ${point.occupancy}% occupancy.`,
+    sections: [
+      {
+        title: "Demand drivers",
+        summary: point.note,
+        bullets: point.drivers,
+      },
+      {
+        title: "Comp-set context",
+        summary: point.compSet,
+        bullets: [
+          `Actual vs target moved ${delta}% ${point.actual >= point.target ? "ahead" : "behind"} the plan.`,
+          "Nearby rate moves stayed supportive.",
+        ],
+      },
+      {
+        title: "Recommendation",
+        summary:
+          point.actual >= point.target
+            ? "This point supports a slightly stronger rate posture."
+            : "This point suggests keeping the next lift conservative.",
+        bullets: ["Use this as a reference when adjusting the next open nights."],
+      },
+    ],
+  };
+}
 
-  document.body.appendChild(preview);
-  return preview;
+function buildTrendRows(point: TrendPoint) {
+  return [
+    ["Metric", "Value"],
+    ["Date", point.label],
+    ["Actual ADR", String(point.actual)],
+    ["Target ADR", String(point.target)],
+    ["Occupancy", `${point.occupancy}%`],
+    ["Confidence", `${point.confidence}%`],
+    ["Note", point.note],
+  ];
 }
 
 export default function PropertyDetailPage() {
@@ -1059,11 +1317,14 @@ export default function PropertyDetailPage() {
   const [rangeLabel, setRangeLabel] = useState<RangeKey>("Last 30 Days");
   const [rangeOpen, setRangeOpen] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [ruleForm, setRuleForm] = useState<RuleForm | null>(null);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
-  const [draggedRuleId, setDraggedRuleId] = useState<string | null>(null);
+  const [selectedTrendPoint, setSelectedTrendPoint] = useState<TrendPoint | null>(null);
+  const [trendInsightOpen, setTrendInsightOpen] = useState(false);
+  const [dayDrawerOpen, setDayDrawerOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
+  const [draggingRuleId, setDraggingRuleId] = useState<string | null>(null);
   const [dropTargetRuleId, setDropTargetRuleId] = useState<string | null>(null);
 
   const rulesAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -1075,7 +1336,7 @@ export default function PropertyDetailPage() {
     subtitle: "Suggested base rate increase for upcoming weekend.",
     primaryDriver: "Local festival demand and compressed supply.",
     marketContext: "Booking pace is running ahead of the prior 30-day average.",
-    competitiveSet: "3 of 5 direct competitors are already booked or blocked.",
+    competitiveSet: "3 of 5 direct competitors are already blocked or booked.",
   };
 
   const calendarMonthLabel = useMemo(() => formatMonthYear(calendarMonthDate), [calendarMonthDate]);
@@ -1110,16 +1371,8 @@ export default function PropertyDetailPage() {
     return trendData;
   }, [rangeLabel]);
 
-  const calendarLegendItems: CalendarLegendItem[] = [
-    { label: "Available / No Event", swatchClass: "bg-[#ffffff] border-[#d6dde8]" },
-    { label: "Available / Event", swatchClass: "bg-[#dff3ea] border-[#8fd0b2]" },
-    { label: "Booked / No Event", swatchClass: "bg-[#e8edff] border-[#aebff7]" },
-    { label: "Booked / Event", swatchClass: "bg-[#ffe8d6] border-[#f1b889]" },
-    { label: "Past Date", swatchClass: "bg-[#eef2f7] border-[#dfe4ea]" },
-  ];
-
   useEffect(() => {
-    const t = window.setTimeout(() => setIsLoading(false), 500);
+    const t = window.setTimeout(() => setIsLoading(false), 450);
     return () => window.clearTimeout(t);
   }, []);
 
@@ -1147,8 +1400,7 @@ export default function PropertyDetailPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedDate) return;
-    if (fallbackSelectedDate) {
+    if (!selectedDate && fallbackSelectedDate) {
       setSelectedDateIso(toIsoDate(fallbackSelectedDate.date));
     }
   }, [fallbackSelectedDate, selectedDate]);
@@ -1179,7 +1431,6 @@ export default function PropertyDetailPage() {
   );
 
   const openCreateRule = () => {
-    setEditorOpen(true);
     setEditingRuleId("new");
     setRuleForm({
       name: "",
@@ -1189,7 +1440,6 @@ export default function PropertyDetailPage() {
   };
 
   const openEditRule = (rule: RuleItem) => {
-    setEditorOpen(true);
     setEditingRuleId(rule.id);
     setRuleForm({
       name: rule.name,
@@ -1199,7 +1449,6 @@ export default function PropertyDetailPage() {
   };
 
   const closeEditor = () => {
-    setEditorOpen(false);
     setEditingRuleId(null);
     setRuleForm(null);
   };
@@ -1265,6 +1514,24 @@ export default function PropertyDetailPage() {
       title: direction === "up" ? "Rule moved up" : "Rule moved down",
     });
   };
+
+  const reorderRules = useCallback((sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return;
+
+    setRules((current) => {
+      const sourceIndex = current.findIndex((rule) => rule.id === sourceId);
+      const targetIndex = current.findIndex((rule) => rule.id === targetId);
+      if (sourceIndex === -1 || targetIndex === -1) return current;
+
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      const adjustedTargetIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      next.splice(adjustedTargetIndex, 0, moved);
+      return next;
+    });
+
+    setDropTargetRuleId(null);
+  }, []);
 
   const onViewRuleHierarchy = () => {
     setActiveTab("Rules");
@@ -1358,7 +1625,78 @@ export default function PropertyDetailPage() {
 
   const handleCalendarSelect = (day: CalendarDay) => {
     setSelectedDateIso(toIsoDate(day.date));
+    setSelectedDay(day);
+    setDayDrawerOpen(true);
     replaceUrl({ date: day.date });
+  };
+
+  const handleExportCsv = () => {
+    const point = selectedTrendPoint ?? chartData[chartData.length - 1];
+    const csv = buildCsv(buildTrendRows(point));
+    downloadTextFile("property-report.csv", "text/csv;charset=utf-8", csv);
+    appToast.success({ title: "CSV downloaded" });
+  };
+
+  const handleExportPdf = () => {
+    const point = selectedTrendPoint ?? chartData[chartData.length - 1];
+    const pdf = buildSimplePdf([
+      "RevStream AI Property Report",
+      "Oceanfront Suite",
+      `Generated: ${new Date().toLocaleString()}`,
+      `Selected trend point: ${point.label}`,
+      `Actual ADR: ${point.actual}`,
+      `Target ADR: ${point.target}`,
+      `Occupancy: ${point.occupancy}%`,
+    ]);
+    downloadTextFile("property-report.pdf", "application/pdf", pdf);
+    appToast.success({ title: "PDF downloaded" });
+  };
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      appToast.success({ title: "Share link copied" });
+    } catch {
+      appToast.error({ title: "Could not copy share link" });
+    }
+  };
+
+  const handleDragStart = (ruleId: string, event: ReactDragEvent<HTMLDivElement>) => {
+    setDraggingRuleId(ruleId);
+    setDropTargetRuleId(ruleId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", ruleId);
+
+    const element = event.currentTarget;
+    event.dataTransfer.setDragImage(
+      element,
+      element.offsetWidth / 2,
+      element.offsetHeight / 2
+    );
+  };
+
+  const handleDragEnd = () => {
+    setDraggingRuleId(null);
+    setDropTargetRuleId(null);
+  };
+
+  const handleDragEnter = (ruleId: string) => {
+    if (draggingRuleId && ruleId !== draggingRuleId) {
+      setDropTargetRuleId(ruleId);
+    }
+  };
+
+  const handleDragOver = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (draggingRuleId) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleDrop = (targetRuleId: string) => {
+    if (!draggingRuleId) return;
+    reorderRules(draggingRuleId, targetRuleId);
+    setDraggingRuleId(null);
   };
 
   if (isLoading) {
@@ -1368,6 +1706,8 @@ export default function PropertyDetailPage() {
       </DashboardLayout>
     );
   }
+
+  const selectedTrendInsight = selectedTrendPoint ? createRecommendationInsight(selectedTrendPoint) : null;
 
   return (
     <DashboardLayout>
@@ -1396,13 +1736,37 @@ export default function PropertyDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[#737784] bg-white px-4 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]">
+            <button
+              type="button"
+              onClick={copyShareLink}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[#737784] bg-white px-4 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+            >
+              <Icon name="share" className="text-[18px]" />
+              Copy Share Link
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[#737784] bg-white px-4 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+            >
+              <Icon name="download" className="text-[18px]" />
+              Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-[#737784] bg-white px-4 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+            >
+              <Icon name="picture_as_pdf" className="text-[18px]" />
+              Export PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => appToast.message({ title: "Live view opening..." })}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#003c90] px-4 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+            >
               <Icon name="open_in_new" className="text-[18px]" />
               View Live
-            </button>
-            <button className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#003c90] px-4 text-[14px] font-medium text-white hover:bg-[#0f52ba]">
-              <Icon name="edit" className="text-[18px]" />
-              Edit Pricing Strategy
             </button>
           </div>
         </div>
@@ -1455,109 +1819,121 @@ export default function PropertyDetailPage() {
                 }}
                 isRangeOpen={rangeOpen}
                 onCloseRange={() => setRangeOpen(false)}
+                onPointClick={(point) => {
+                  setSelectedTrendPoint(point);
+                  setTrendInsightOpen(true);
+                }}
               />
 
-          <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                    Algorithmic Recommendation
-                  </h2>
-                </div>
+              <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
+                        Algorithmic Recommendation
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTrendPoint(chartData[chartData.length - 1]);
+                          setTrendInsightOpen(true);
+                        }}
+                        className="rounded-full border border-[#c3c6d5] px-3 py-1 text-[13px] font-semibold text-[#003c90] transition hover:bg-[#f2f4f6]"
+                      >
+                        Why this rate?
+                      </button>
+                    </div>
 
-                <p className="mt-2 text-[15px] leading-6 text-[#434653]">
-                  {recommendation.subtitle}
-                </p>
-              </div>
-
-              <div className="lg:ml-auto flex justify-end">
-                <span className="inline-flex items-center justify-center rounded-[10px] border border-[#c3d5f7] bg-[#d0e1fb] px-4 py-3 text-[13px] font-medium leading-none text-[#1d59c1]">
-                  <Icon name="verified" className="mr-2 text-[18px] leading-none" />
-                  {recommendation.confidenceLabel}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-[#e0e3e5] pt-6">
-              <div className="grid gap-6 xl:grid-cols-[1fr_280px] xl:items-start">
-                <div>
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                    Primary Drivers
+                    <p className="mt-2 text-[15px] leading-6 text-[#434653]">
+                      {recommendation.subtitle}
+                    </p>
                   </div>
 
-                  <div className="mt-4 space-y-4">
-                    <RecommendationDriver
-                      icon="event"
-                      title="Local Festival Detected"
-                      text='"Art Deco Weekend" identified on Oct 24-26. Expected influx of high-intent travelers.'
-                    />
-                    <RecommendationDriver
-                      icon="speed"
-                      title="Elevated Booking Pace"
-                      text="Compset properties are booking 22% faster than the historical 30-day average for this timeframe."
-                    />
-                    <RecommendationDriver
-                      icon="inventory_2"
-                      title="Constrained Supply"
-                      text="3 of 5 direct competitor suites in the same building are already blocked or booked."
-                    />
+                  <div className="lg:ml-auto flex justify-end">
+                    <span className="inline-flex items-center justify-center rounded-[10px] border border-[#c3d5f7] bg-[#d0e1fb] px-4 py-3 text-[13px] font-medium leading-none text-[#1d59c1]">
+                      <Icon name="verified" className="mr-2 text-[18px] leading-none" />
+                      {recommendation.confidenceLabel}
+                    </span>
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-[#eceef0] p-6 text-center">
-                  <div className="text-[14px] font-medium text-[#434653]">
-                    Suggested Rate
-                  </div>
+                <div className="mt-6 border-t border-[#e0e3e5] pt-6">
+                  <div className="grid gap-6 xl:grid-cols-[1fr_280px] xl:items-start">
+                    <div>
+                      <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                        Primary Drivers
+                      </div>
 
-                  <div className="mt-3 text-[44px] font-bold leading-none tracking-tighter text-[#191c1e]">
-                    {isApplied ? "$510" : recommendation.suggestedRate}
-                  </div>
+                      <div className="mt-4 space-y-4">
+                        <RecommendationDriver
+                          icon="event"
+                          title="Local Festival Detected"
+                          text='"Art Deco Weekend" identified on Oct 24-26. Expected influx of high-intent travelers.'
+                        />
+                        <RecommendationDriver
+                          icon="speed"
+                          title="Elevated Booking Pace"
+                          text="Compset properties are booking 22% faster than the historical 30-day average for this timeframe."
+                        />
+                        <RecommendationDriver
+                          icon="inventory_2"
+                          title="Constrained Supply"
+                          text="3 of 5 direct competitor suites in the same building are already blocked or booked."
+                        />
+                      </div>
+                    </div>
 
-                  <div
-                    className={`mt-4 text-[15px] font-semibold ${
-                      Number(recommendation.suggestedRate.replace(/\$/g, "")) >=
-                      Number(recommendation.currentRate.replace(/\$/g, ""))
-                        ? "text-[#27835d]"
-                        : "text-[#ba1a1a]"
-                    }`}
-                  >
-                    {Number(recommendation.suggestedRate.replace(/\$/g, "")) >=
-                    Number(recommendation.currentRate.replace(/\$/g, ""))
-                      ? `+${Math.round(
-                          ((Number(recommendation.suggestedRate.replace(/\$/g, "")) -
-                            Number(recommendation.currentRate.replace(/\$/g, ""))) /
-                            Number(recommendation.currentRate.replace(/\$/g, ""))) *
-                            100
-                        )}% from current`
-                      : `${Math.round(
-                          ((Number(recommendation.suggestedRate.replace(/\$/g, "")) -
-                            Number(recommendation.currentRate.replace(/\$/g, ""))) /
-                            Number(recommendation.currentRate.replace(/\$/g, ""))) *
-                            100
-                        )}% from current`}
-                  </div>
+                    <div className="rounded-2xl bg-[#eceef0] p-6 text-center">
+                      <div className="text-[14px] font-medium text-[#434653]">Suggested Rate</div>
 
-                  <div className="mt-2 text-[15px] leading-6 font-medium text-[#1d59c1]">
-                    {isApplied
-                      ? "Applied to selected dates"
-                      : `Suggested increase from ${recommendation.currentRate} to ${recommendation.suggestedRate}`}
-                  </div>
+                      <div className="mt-3 text-[44px] font-bold leading-none tracking-tighter text-[#191c1e]">
+                        {isApplied ? "$510" : recommendation.suggestedRate}
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={openApplyConfirm}
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
-                  >
-                    Apply Recommendation
-                  </button>
+                      <div
+                        className={`mt-4 text-[15px] font-semibold ${
+                          Number(recommendation.suggestedRate.replace(/\$/g, "")) >=
+                          Number(recommendation.currentRate.replace(/\$/g, ""))
+                            ? "text-[#27835d]"
+                            : "text-[#ba1a1a]"
+                        }`}
+                      >
+                        {Number(recommendation.suggestedRate.replace(/\$/g, "")) >=
+                        Number(recommendation.currentRate.replace(/\$/g, ""))
+                          ? `+${Math.round(
+                              ((Number(recommendation.suggestedRate.replace(/\$/g, "")) -
+                                Number(recommendation.currentRate.replace(/\$/g, ""))) /
+                                Number(recommendation.currentRate.replace(/\$/g, ""))) *
+                                100
+                            )}% from current`
+                          : `${Math.round(
+                              ((Number(recommendation.suggestedRate.replace(/\$/g, "")) -
+                                Number(recommendation.currentRate.replace(/\$/g, ""))) /
+                                Number(recommendation.currentRate.replace(/\$/g, ""))) *
+                                100
+                            )}% from current`}
+                      </div>
+
+                      <div className="mt-2 text-[15px] leading-6 font-medium text-[#1d59c1]">
+                        {isApplied
+                          ? "Applied to selected dates"
+                          : `Suggested increase from ${recommendation.currentRate} to ${recommendation.suggestedRate}`}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={openApplyConfirm}
+                        className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+                      >
+                        Apply Recommendation
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-            </div>
 
-            <div className="h-full" ref={rulesAnchorRef}>
+            <div ref={rulesAnchorRef} className="h-full">
               <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
@@ -1598,85 +1974,36 @@ export default function PropertyDetailPage() {
                       onEdit={openEditRule}
                       onDelete={openDeleteConfirm}
                       onMove={moveRule}
-                      onDragStart={(id, event) => {
-                        setDraggedRuleId(id);
-                        setDropTargetRuleId(id);
-
-                        const card =
-                          (event.currentTarget.closest("[data-rule-card]") as HTMLElement | null) ??
-                          null;
-                        if (!card) return;
-
-                        const preview = createDragPreview(card);
-                        event.dataTransfer.effectAllowed = "move";
-                        event.dataTransfer.setDragImage(preview, preview.offsetWidth / 2, 18);
-
-                        window.setTimeout(() => {
-                          preview.remove();
-                        }, 0);
-                      }}
-                      onDragEnd={() => {
-                        setDraggedRuleId(null);
-                        setDropTargetRuleId(null);
-                      }}
-                      onDragEnter={(id) => {
-                        if (draggedRuleId && draggedRuleId !== id) {
-                          setDropTargetRuleId(id);
-                        }
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(dropId) => {
-                        if (!draggedRuleId || draggedRuleId === dropId) return;
-
-                        setRules((current) => {
-                          const fromIndex = current.findIndex((rule) => rule.id === draggedRuleId);
-                          const toIndex = current.findIndex((rule) => rule.id === dropId);
-
-                          if (fromIndex === -1 || toIndex === -1) return current;
-
-                          const next = [...current];
-                          const [moved] = next.splice(fromIndex, 1);
-                          const insertionIndex = next.findIndex((rule) => rule.id === dropId) + 1;
-                          next.splice(insertionIndex, 0, moved);
-                          return next;
-                        });
-
-                        appToast.message({
-                          title: "Rules reordered",
-                        });
-                        setDraggedRuleId(null);
-                        setDropTargetRuleId(null);
-                      }}
-                      canDrop={draggedRuleId !== null}
-                      dragging={draggedRuleId === rule.id}
-                      showDropLine={dropTargetRuleId === rule.id && draggedRuleId !== rule.id}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onDragEnter={handleDragEnter}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      canDrop={dropTargetRuleId === rule.id && draggingRuleId !== rule.id}
+                      dragging={draggingRuleId === rule.id}
+                      showDropLine={dropTargetRuleId === rule.id && draggingRuleId !== rule.id}
                     />
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={onViewRuleHierarchy}
-                  className="mt-6 inline-flex items-center gap-2 text-[14px] font-medium text-[#003c90] hover:text-[#0f52ba]"
-                >
-                  View Rule Hierarchy
-                  <Icon name="arrow_right_alt" className="text-[18px]" />
-                </button>
+                <div className="mt-5 rounded-[14px] bg-[#f8fafc] p-4 text-[14px] leading-6 text-[#434653]">
+                  Tip: drag the handle to reorder. Enter edits a rule, and Alt+ArrowUp / Alt+ArrowDown still works.
+                </div>
               </div>
             </div>
           </section>
         ) : null}
 
         {activeTab === "Calendar" ? (
-          <section className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
+          <section className="grid gap-6 xl:grid-cols-[1.45fr_0.9fr]">
             <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
                     Pricing Calendar
                   </h2>
-                  <p className="mt-1 text-[14px] leading-5.5 text-[#434653]">
-                    Click a date to inspect the recommendation, event signal, and occupancy context.
+                  <p className="mt-2 text-[15px] leading-6 text-[#434653]">
+                    Click any date to inspect demand drivers and rate context.
                   </p>
                 </div>
 
@@ -1684,212 +2011,117 @@ export default function PropertyDetailPage() {
                   <button
                     type="button"
                     onClick={() => updateSelectedMonth(addMonths(calendarMonthDate, -1))}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#e0e3e5] bg-white text-[#191c1e] hover:bg-[#f2f4f6]"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#c3c6d5] text-[#191c1e] transition hover:bg-[#f2f4f6]"
                     aria-label="Previous month"
                   >
-                    <Icon name="chevron_left" className="text-[22px]" />
+                    <Icon name="chevron_left" className="text-[20px]" />
                   </button>
-
-                  <div className="min-w-30 text-center text-[15px] font-semibold text-[#191c1e]">
+                  <span className="min-w-28 text-center text-[15px] font-semibold text-[#191c1e]">
                     {calendarMonthLabel}
-                  </div>
-
+                  </span>
                   <button
                     type="button"
                     onClick={() => updateSelectedMonth(addMonths(calendarMonthDate, 1))}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#e0e3e5] bg-white text-[#191c1e] hover:bg-[#f2f4f6]"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#c3c6d5] text-[#191c1e] transition hover:bg-[#f2f4f6]"
                     aria-label="Next month"
                   >
-                    <Icon name="chevron_right" className="text-[22px]" />
+                    <Icon name="chevron_right" className="text-[20px]" />
                   </button>
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-7 gap-3">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                  <div
-                    key={day}
-                    className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]"
-                  >
-                    {day}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <CalendarLegendItem label="Available / No Event" swatchClass="bg-[#ffffff] border-[#d6dde8]" />
+                <CalendarLegendItem label="Available / Event" swatchClass="bg-[#dff3ea] border-[#8fd0b2]" />
+                <CalendarLegendItem label="Booked / No Event" swatchClass="bg-[#e8edff] border-[#aebff7]" />
+                <CalendarLegendItem label="Booked / Event" swatchClass="bg-[#ffe8d6] border-[#f1b889]" />
+                <CalendarLegendItem label="Past Date" swatchClass="bg-[#eef2f7] border-[#dfe4ea]" />
+              </div>
+
+              <div className="mt-6 grid grid-cols-7 gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#737784]">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((weekday) => (
+                  <div key={weekday} className="px-2 py-1">
+                    {weekday}
                   </div>
                 ))}
+              </div>
 
-                {calendarGrid.map((item, index) =>
-                  item ? (
+              <div className="mt-2 grid grid-cols-7 gap-2">
+                {calendarGrid.map((day, index) =>
+                  day ? (
                     <CalendarCell
-                      key={`${toIsoDate(item.date)}-${index}`}
-                      day={item}
-                      selected={activeSelectedDate ? isSameDay(activeSelectedDate.date, item.date) : false}
+                      key={toIsoDate(day.date)}
+                      day={day}
+                      selected={selectedDateIso === toIsoDate(day.date)}
                       onSelect={handleCalendarSelect}
                       onNavigate={handleCalendarNavigate}
                     />
                   ) : (
                     <div
-                      key={`blank-${index}`}
-                      className="h-23 rounded-[14px] border border-transparent"
-                      aria-hidden="true"
+                      key={`empty-${index}`}
+                      className="h-23 rounded-[14px] border border-dashed border-[#eef2f7] bg-[#fafbfc]"
                     />
                   )
                 )}
-              </div>
-
-              <div className="mt-6 rounded-2xl border border-[#e0e3e5] bg-[#f8fafc] p-4">
-                <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                  Legend
-                </div>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {calendarLegendItems.map((item) => (
-                    <CalendarLegendItem
-                      key={item.label}
-                      label={item.label}
-                      swatchClass={item.swatchClass}
-                    />
-                  ))}
-                </div>
               </div>
             </div>
 
             <div className="space-y-6">
               <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-                <h3 className="text-[24px] font-semibold leading-8 tracking-[-0.02em] text-[#191c1e]">
-                  Selected Date
-                </h3>
-
-                <div className="mt-4 rounded-2xl bg-[#f2f4f6] p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                        {activeSelectedDate ? formatFullDate(activeSelectedDate.date) : "No date selected"}
-                      </div>
-                      <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-[#191c1e]">
-                        Suggested Rate {activeSelectedDate ? formatCurrency(activeSelectedDate.rate) : "—"}
-                      </div>
-                    </div>
-
-                    {activeSelectedDate?.hasEvent ? (
-                      <span className="inline-flex items-center rounded-full bg-[#d0e1fb] px-3 py-1 text-[12px] font-semibold text-[#003c90]">
-                        Event Detected
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold ${
-                        activeSelectedDate?.isBooked
-                          ? "bg-[#d0e1fb] text-[#003c90]"
-                          : "bg-[#eceef0] text-[#434653]"
-                      }`}
-                    >
-                      {activeSelectedDate?.isBooked ? "Booked" : "Available"}
-                    </span>
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold ${
-                        activeSelectedDate?.hasEvent
-                          ? "bg-[#e9f1ff] text-[#1d59c1]"
-                          : "bg-[#eceef0] text-[#737784]"
-                      }`}
-                    >
-                      {activeSelectedDate?.hasEvent ? "Event" : "No Event"}
-                    </span>
-                    <span
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold ${
-                        activeSelectedDate?.isPast
-                          ? "bg-[#eceef0] text-[#737784]"
-                          : activeSelectedDate?.isToday
-                            ? "bg-[#d0e1fb] text-[#003c90]"
-                            : "bg-[#f7f9fb] text-[#434653]"
-                      }`}
-                    >
-                      {activeSelectedDate?.isPast
-                        ? "Past Date"
-                        : activeSelectedDate?.isToday
-                          ? "Today"
-                          : "Upcoming"}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[14px] bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                        Occupancy
-                      </div>
-                      <div className="mt-1 text-[18px] font-semibold text-[#191c1e]">
-                        {activeSelectedDate ? `${activeSelectedDate.occupancy}%` : "—"}
-                      </div>
-                    </div>
-                    <div className="rounded-[14px] bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                        Lead time
-                      </div>
-                      <div className="mt-1 text-[18px] font-semibold text-[#191c1e]">
-                        {selectedDateContext ? `${selectedDateContext.leadTimeDays} days` : "—"}
-                      </div>
-                    </div>
-                    <div className="rounded-[14px] bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                        Booking pace delta
-                      </div>
-                      <div className="mt-1 text-[18px] font-semibold text-[#191c1e]">
-                        {selectedDateContext?.bookingPaceDelta ?? "—"}
-                      </div>
-                    </div>
-                    <div className="rounded-[14px] bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                        Comp set delta
-                      </div>
-                      <div className="mt-1 text-[18px] font-semibold text-[#191c1e]">
-                        {selectedDateContext?.compSetDelta ?? "—"}
-                      </div>
-                    </div>
-                    <div className="rounded-[14px] bg-white p-3 sm:col-span-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                        Confidence
-                      </div>
-                      <div className="mt-1 text-[18px] font-semibold text-[#191c1e]">
-                        {selectedDateContext?.confidence ?? "—"}%
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3 text-[14px] leading-5.5 text-[#434653]">
-                    <p>{selectedDateContext?.summary ?? "Select a date to see more context."}</p>
-                    <p className="font-medium text-[#191c1e]">
-                      {selectedDateContext?.action ??
-                        "Detailed context appears here when you pick a date."}
-                    </p>
-                  </div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                  Selected Day
                 </div>
+                {activeSelectedDate && selectedDateContext ? (
+                  <>
+                    <div className="mt-3 text-[28px] font-semibold tracking-[-0.02em] text-[#191c1e]">
+                      {formatFullDate(activeSelectedDate.date)}
+                    </div>
+                    <p className="mt-3 text-[14px] leading-6 text-[#434653]">
+                      {selectedDateContext.summary}
+                    </p>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <SmallStat label="Rate" value={formatCurrency(activeSelectedDate.rate)} />
+                      <SmallStat label="Occupancy" value={`${activeSelectedDate.occupancy}%`} />
+                      <SmallStat label="Confidence" value={`${selectedDateContext.confidence}%`} />
+                      <SmallStat label="Lead time" value={`${selectedDateContext.leadTimeDays}d`} />
+                    </div>
+
+                    <div className="mt-4 rounded-[14px] bg-[#f8fafc] p-4 text-[14px] leading-6 text-[#434653]">
+                      {selectedDateContext.action}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDayDrawerOpen(true);
+                        setSelectedDay(activeSelectedDate);
+                      }}
+                      className="mt-4 inline-flex h-10 items-center rounded-full bg-[#003c90] px-4 text-[14px] font-semibold text-white transition hover:opacity-95"
+                    >
+                      Open day analysis
+                    </button>
+                  </>
+                ) : null}
               </div>
 
               <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-                <h3 className="text-[24px] font-semibold leading-8 tracking-[-0.02em] text-[#191c1e]">
-                  Daily Actions
-                </h3>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                  Booking Pace
+                </div>
                 <div className="mt-4 space-y-3">
-                  <button
-                    type="button"
-                    onClick={openApplyConfirm}
-                    disabled={activeSelectedDate?.isPast ?? true}
-                    className={`w-full rounded-[10px] px-4 py-3 text-[14px] font-medium transition ${
-                      activeSelectedDate?.isPast
-                        ? "cursor-not-allowed bg-[#cbd5e1] text-[#737784]"
-                        : "bg-[#003c90] text-white hover:bg-[#0f52ba]"
-                    }`}
-                  >
-                    {activeSelectedDate?.isPast ? "Historical Date" : "Accept Suggested Rate"}
-                  </button>
-                  <button
-                    disabled={activeSelectedDate?.isPast ?? true}
-                    className={`w-full rounded-[10px] border px-4 py-3 text-[14px] font-medium transition ${
-                      activeSelectedDate?.isPast
-                        ? "cursor-not-allowed border-[#d6dde8] bg-[#f2f4f6] text-[#737784]"
-                        : "border-[#737784] bg-white text-[#191c1e] hover:bg-[#f2f4f6]"
-                    }`}
-                  >
-                    {activeSelectedDate?.isPast ? "View History" : "Adjust Manually"}
-                  </button>
+                  {[
+                    "Next 7 nights are pacing 6% ahead of the prior month.",
+                    "The strongest pickup is on event-adjacent dates.",
+                    "Weekday fill still needs price support to close gaps.",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-[14px] bg-[#f8fafc] p-3 text-[14px] leading-6 text-[#434653]"
+                    >
+                      {item}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1897,103 +2129,45 @@ export default function PropertyDetailPage() {
         ) : null}
 
         {activeTab === "Competitors" ? (
-          <section className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
-            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-              <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                Competitive Set
-              </h2>
-              <p className="mt-1 text-[14px] leading-5.5 text-[#434653]">
-                Compare rates and occupancy positioning against the closest market peers.
-              </p>
-
-              <div className="mt-6 overflow-hidden rounded-2xl border border-[#e0e3e5]">
-                <table className="w-full border-collapse">
-                  <thead className="bg-[#f2f4f6]">
-                    <tr className="text-left text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                      <th className="px-4 py-3">Property</th>
-                      <th className="px-4 py-3">Rate</th>
-                      <th className="px-4 py-3">Occupancy</th>
-                      <th className="px-4 py-3">Position</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {competitors.map((competitor) => (
-                      <tr
-                        key={competitor.name}
-                        className="border-t border-[#e0e3e5] text-[14px] text-[#191c1e]"
-                      >
-                        <td className="px-4 py-4 font-medium">{competitor.name}</td>
-                        <td className="px-4 py-4">{competitor.rate}</td>
-                        <td className="px-4 py-4">{competitor.occupancy}</td>
-                        <td className="px-4 py-4 text-[#434653]">{competitor.position}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-              <h3 className="text-[24px] font-semibold leading-8 tracking-[-0.02em] text-[#191c1e]">
-                Positioning Snapshot
-              </h3>
-              <div className="mt-6 space-y-4">
-                {competitors.map((competitor) => {
-                  const width =
-                    competitor.name === "Your Listing"
-                      ? "w-[74%]"
-                      : competitor.name === "South Beach Suite"
-                        ? "w-[68%]"
-                        : competitor.name === "Bayfront Loft"
-                          ? "w-[88%]"
-                          : "w-[92%]";
-
-                  return (
-                    <div key={competitor.name}>
-                      <div className="mb-2 flex items-center justify-between text-[14px] text-[#434653]">
-                        <span>{competitor.name}</span>
-                        <span>{competitor.rate}</span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-[#e0e3e5]">
-                        <div className={`h-2 rounded-full bg-[#003c90] ${width}`} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-6 rounded-2xl bg-[#f2f4f6] p-5">
-                <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                  Selected Listing
+          <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {competitors.map((competitor) => (
+              <article
+                key={competitor.name}
+                className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]"
+              >
+                <div className="text-[18px] font-semibold text-[#191c1e]">{competitor.name}</div>
+                <div className="mt-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                  {competitor.position}
                 </div>
-                <div className="mt-1 text-[22px] font-semibold text-[#191c1e]">Your Listing</div>
-                <div className="mt-3 text-[14px] leading-5.5 text-[#434653]">
-                  You are currently pricing slightly below the highest comp and above the lower tier.
+                <div className="mt-4 text-[36px] font-bold tracking-[-0.03em] text-[#003c90]">
+                  {competitor.rate}
                 </div>
-              </div>
-            </div>
+                <div className="mt-1 text-[14px] text-[#434653]">{competitor.occupancy} occupancy</div>
+                <p className="mt-4 text-[14px] leading-6 text-[#434653]">{competitor.note}</p>
+              </article>
+            ))}
           </section>
         ) : null}
 
         {activeTab === "Rules" ? (
-          <section className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+          <section className="space-y-6">
             <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                    Rules Hierarchy
+                    Dynamic Rules
                   </h2>
-                  <p className="mt-1 text-[14px] leading-5.5 text-[#434653]">
-                    Review the order in which pricing rules are applied to this listing.
+                  <p className="mt-2 text-[15px] leading-6 text-[#434653]">
+                    Keep rules editable, reorderable, and easy to explain.
                   </p>
                 </div>
+
                 <button
                   type="button"
                   onClick={openCreateRule}
-                  className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#003c90] px-4 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+                  className="inline-flex h-10 items-center rounded-full bg-[#003c90] px-4 text-[14px] font-semibold text-white transition hover:opacity-95"
                 >
-                  <Icon name="add" className="text-[18px]" />
-                  Add Rule
+                  Add rule
                 </button>
               </div>
 
@@ -2021,105 +2195,25 @@ export default function PropertyDetailPage() {
                     onEdit={openEditRule}
                     onDelete={openDeleteConfirm}
                     onMove={moveRule}
-                    onDragStart={(id, event) => {
-                      setDraggedRuleId(id);
-                      setDropTargetRuleId(id);
-
-                      const card =
-                        (event.currentTarget.closest("[data-rule-card]") as HTMLElement | null) ??
-                          null;
-                      if (!card) return;
-
-                      const preview = createDragPreview(card);
-                      event.dataTransfer.effectAllowed = "move";
-                      event.dataTransfer.setDragImage(preview, preview.offsetWidth / 2, 18);
-
-                      window.setTimeout(() => {
-                        preview.remove();
-                      }, 0);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedRuleId(null);
-                      setDropTargetRuleId(null);
-                    }}
-                    onDragEnter={(id) => {
-                      if (draggedRuleId && draggedRuleId !== id) {
-                        setDropTargetRuleId(id);
-                      }
-                    }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(dropId) => {
-                      if (!draggedRuleId || draggedRuleId === dropId) return;
-
-                      setRules((current) => {
-                        const fromIndex = current.findIndex((rule) => rule.id === draggedRuleId);
-                        const toIndex = current.findIndex((rule) => rule.id === dropId);
-
-                        if (fromIndex === -1 || toIndex === -1) return current;
-
-                        const next = [...current];
-                        const [moved] = next.splice(fromIndex, 1);
-                        const insertionIndex = next.findIndex((rule) => rule.id === dropId) + 1;
-                        next.splice(insertionIndex, 0, moved);
-                        return next;
-                      });
-
-                      appToast.message({
-                        title: "Rules reordered",
-                      });
-                      setDraggedRuleId(null);
-                      setDropTargetRuleId(null);
-                    }}
-                    canDrop={draggedRuleId !== null}
-                    dragging={draggedRuleId === rule.id}
-                    showDropLine={dropTargetRuleId === rule.id && draggedRuleId !== rule.id}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    canDrop={dropTargetRuleId === rule.id && draggingRuleId !== rule.id}
+                    dragging={draggingRuleId === rule.id}
+                    showDropLine={dropTargetRuleId === rule.id && draggingRuleId !== rule.id}
                   />
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={onViewRuleHierarchy}
-                className="mt-6 inline-flex items-center gap-2 text-[14px] font-medium text-[#003c90] hover:text-[#0f52ba]"
-              >
-                View Rule Hierarchy
-                <Icon name="arrow_right_alt" className="text-[18px]" />
-              </button>
-            </div>
-
-            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-              <h3 className="text-[24px] font-semibold leading-8 tracking-[-0.02em] text-[#191c1e]">
-                Rule Details
-              </h3>
-
-              <div className="mt-4 rounded-2xl bg-[#f2f4f6] p-5">
-                <div className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                  Current Focus
-                </div>
-                <p className="mt-2 text-[15px] leading-6 text-[#434653]">
-                  Weekend Premium is driving the majority of upcoming uplift, while last-minute
-                  discounting remains active to reduce orphan inventory.
-                </p>
-              </div>
-
-              <div className="mt-5 space-y-3 text-[14px] leading-5.5 text-[#434653]">
-                <p>• Highest priority rules are property-specific and date-sensitive.</p>
-                <p>• Regional defaults only apply when no local override exists.</p>
-                <p>• Paused rules remain visible for audit but do not affect pricing.</p>
+              <div className="mt-5 rounded-[14px] bg-[#f8fafc] p-4 text-[14px] leading-6 text-[#434653]">
+                Tip: drag the handle to reorder. Enter edits a rule, and Alt+ArrowUp / Alt+ArrowDown still works.
               </div>
             </div>
           </section>
         ) : null}
       </div>
-
-      <RuleModal
-        open={editorOpen}
-        title={editingRuleId === "new" ? "Create Rule" : "Edit Rule"}
-        form={ruleForm}
-        onChange={setRuleForm}
-        onClose={closeEditor}
-        onSave={saveRule}
-      />
 
       <ConfirmDialog
         open={confirmAction !== null && confirmModalCopy !== null}
@@ -2127,9 +2221,89 @@ export default function PropertyDetailPage() {
         description={confirmModalCopy?.description ?? ""}
         confirmLabel={confirmModalCopy?.confirmLabel ?? "Confirm"}
         danger={confirmModalCopy?.danger ?? false}
-        onConfirm={confirmActionHandler}
         onClose={() => setConfirmAction(null)}
+        onConfirm={confirmActionHandler}
       />
+
+      <RuleEditorDrawer
+        open={ruleForm !== null}
+        title={editingRuleId === "new" ? "Create Rule" : "Edit Rule"}
+        form={ruleForm}
+        onChange={setRuleForm}
+        onClose={closeEditor}
+        onSave={saveRule}
+      />
+
+      <DayDetailDrawer
+        open={dayDrawerOpen}
+        onOpenChange={(open) => setDayDrawerOpen(open)}
+        day={selectedDay}
+        monthLabel={calendarMonthLabel}
+        onApplyRecommendation={() => {
+          setDayDrawerOpen(false);
+          openApplyConfirm();
+        }}
+      />
+
+      <Drawer
+        open={trendInsightOpen}
+        onOpenChange={setTrendInsightOpen}
+        title={selectedTrendInsight?.title ?? "Why this point moved"}
+        description={selectedTrendInsight?.subtitle}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setTrendInsightOpen(false)}
+              className="rounded-full border border-[#c3c6d5] px-4 py-2 text-[14px] font-semibold text-[#191c1e] transition hover:bg-[#f2f4f6]"
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        {selectedTrendInsight ? (
+          <div className="space-y-5">
+            <section className="rounded-[18px] bg-[#f8fafc] p-4">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                Confidence
+              </div>
+              <div className="mt-2 text-[22px] font-semibold text-[#191c1e]">
+                {selectedTrendInsight.confidence}
+              </div>
+              <p className="mt-2 text-[14px] leading-6 text-[#434653]">
+                {selectedTrendInsight.rationale}
+              </p>
+            </section>
+
+            {selectedTrendInsight.sections.map((section) => (
+              <section key={section.title} className="rounded-[18px] border border-[#e0e3e5] p-4">
+                <div className="text-[15px] font-semibold text-[#191c1e]">{section.title}</div>
+                <p className="mt-1 text-[14px] leading-6 text-[#434653]">{section.summary}</p>
+                <ul className="mt-3 space-y-2">
+                  {section.bullets.map((bullet) => (
+                    <li key={bullet} className="flex gap-3 text-[14px] leading-6 text-[#434653]">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#003c90]" />
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        ) : null}
+      </Drawer>
     </DashboardLayout>
+  );
+}
+
+function SmallStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[14px] bg-[#f8fafc] p-3">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#737784]">
+        {label}
+      </div>
+      <div className="mt-1 text-[18px] font-semibold text-[#191c1e]">{value}</div>
+    </div>
   );
 }

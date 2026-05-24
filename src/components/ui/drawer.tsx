@@ -51,7 +51,7 @@ export function Drawer({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "absolute top-0 h-full w-full max-w-130 overflow-hidden border-[#e0e3e5] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)]",
+          "absolute top-0 h-full w-full max-w-140 overflow-hidden border-[#e0e3e5] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)]",
           side === "right" ? "right-0 border-l" : "left-0 border-r",
           className
         )}
