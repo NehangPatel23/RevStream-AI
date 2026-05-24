@@ -191,7 +191,7 @@ export default function PropertiesPage() {
               updateUrl({ q: event.target.value });
             }}
             placeholder="Search properties..."
-            className="h-11 rounded-[12px] border border-[#c3c6d5] px-4 text-[15px] outline-none transition focus:border-[#003c90]"
+            className="h-11 rounded-xl border border-[#c3c6d5] px-4 text-[15px] outline-none transition focus:border-[#003c90]"
           />
           <select
             value={market}
@@ -199,7 +199,7 @@ export default function PropertiesPage() {
               setMarket(event.target.value);
               updateUrl({ market: event.target.value });
             }}
-            className="h-11 rounded-[12px] border border-[#c3c6d5] bg-white px-4 text-[15px] outline-none transition focus:border-[#003c90]"
+            className="h-11 rounded-xl border border-[#c3c6d5] bg-white px-4 text-[15px] outline-none transition focus:border-[#003c90]"
           >
             <option value="all">All markets</option>
             <option value="miami">Miami</option>
@@ -213,7 +213,7 @@ export default function PropertiesPage() {
               setSort(event.target.value);
               updateUrl({ sort: event.target.value });
             }}
-            className="h-11 rounded-[12px] border border-[#c3c6d5] bg-white px-4 text-[15px] outline-none transition focus:border-[#003c90]"
+            className="h-11 rounded-xl border border-[#c3c6d5] bg-white px-4 text-[15px] outline-none transition focus:border-[#003c90]"
           >
             <option value="recommendation">Sort by recommendation</option>
             <option value="occupancy">Sort by occupancy</option>

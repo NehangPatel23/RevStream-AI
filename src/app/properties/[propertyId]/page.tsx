@@ -694,7 +694,7 @@ function ChartTooltip({
     actual >= target;
 
   return (
-    <div className="min-w-[220px] rounded-[16px] border border-[#e0e3e5] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+    <div className="min-w-55 rounded-2xl border border-[#e0e3e5] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
       <div className="text-[14px] font-semibold text-[#191c1e]">
         {label}
       </div>
@@ -702,7 +702,7 @@ function ChartTooltip({
       <div className="mt-4 space-y-4">
         <div className="flex items-center justify-between gap-5">
           <div className="flex items-center gap-3">
-            <span className="h-[3px] w-5 rounded-full bg-[#003c90]" />
+            <span className="h-0.75 w-5 rounded-full bg-[#003c90]" />
             <span className="text-[14px] font-medium text-[#434653]">
               Actual ADR
             </span>
@@ -715,7 +715,7 @@ function ChartTooltip({
 
         <div className="flex items-center justify-between gap-5">
           <div className="flex items-center gap-3">
-            <span className="h-[3px] w-5 rounded-full border-t-2 border-dashed border-[#b8beca]" />
+            <span className="h-0.75 w-5 rounded-full border-t-2 border-dashed border-[#b8beca]" />
             <span className="text-[14px] font-medium text-[#434653]">
               Target ADR
             </span>
@@ -780,7 +780,7 @@ function TrendChart({
   return (
     <div className="self-start overflow-hidden rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
       <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-        <div className="max-w-[560px] min-w-0">
+        <div className="max-w-140 min-w-0">
           <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
             Performance Trends
           </h2>
@@ -804,7 +804,7 @@ function TrendChart({
             <button
               type="button"
               onClick={onToggleRange}
-              className="inline-flex min-w-[170px] items-center justify-between rounded-[12px] bg-[#f2f4f6] px-4 py-2.5 text-[14px] font-medium text-[#191c1e]"
+              className="inline-flex min-w-42.5 items-center justify-between rounded-xl bg-[#f2f4f6] px-4 py-2.5 text-[14px] font-medium text-[#191c1e]"
             >
               <span>{rangeLabel}</span>
               <Icon name="expand_more" className="text-[18px]" />
@@ -830,7 +830,7 @@ function TrendChart({
         </div>
       </div>
 
-      <div className="mt-5 h-[300px] min-w-0">
+      <div className="mt-5 h-75 min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 12 }}>
             <defs>

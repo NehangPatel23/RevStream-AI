@@ -138,7 +138,7 @@ export function PortfolioChart({ data }: { data: readonly Point[] }) {
   }, []);
 
   return (
-    <div ref={containerRef} className="h-[300px] w-full min-w-0 overflow-visible">
+    <div ref={containerRef} className="h-75 w-full min-w-0 overflow-visible">
       {isReady ? (
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart data={chartData} margin={{ top: 18, right: 24, left: 24, bottom: 34 }}>
