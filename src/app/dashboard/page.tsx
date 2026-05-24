@@ -1,18 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { appToast } from "@/lib/toast";
 import { PortfolioChart } from "@/components/dashboard/portfolio-chart";
+import { ExportActions } from "@/components/shared/export-actions";
+import { InsightDrawer } from "@/components/insights/insight-drawer";
 import {
   alerts as dashboardAlerts,
   kpis as dashboardKpis,
   portfolioSeries,
   recommendations,
 } from "@/lib/data/dashboard";
+import { dashboardActivity, recommendationInsight } from "@/lib/app-shell";
 
 type RangeKey = "7d" | "14d" | "30d";
 type ConfirmAction = "apply-recommendation" | "clear-alerts" | null;
@@ -90,6 +93,17 @@ function KpiCard({
   );
 }
 
+function ActivityToneDot({ tone }: { tone: "info" | "success" | "warning" }) {
+  const toneClass =
+    tone === "success"
+      ? "bg-[#1d59c1]"
+      : tone === "warning"
+        ? "bg-[#ba1a1a]"
+        : "bg-[#003c90]";
+
+  return <span className={cx("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", toneClass)} />;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -102,6 +116,7 @@ export default function DashboardPage() {
   const [isRecommendationApplied, setIsRecommendationApplied] = useState(false);
   const [dismissedAlertTitles, setDismissedAlertTitles] = useState<string[]>([]);
   const [isRangeOpen, setIsRangeOpen] = useState(false);
+  const [insightOpen, setInsightOpen] = useState(false);
 
   const rangeRef = useRef<HTMLDivElement | null>(null);
 
@@ -134,18 +149,15 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const updateRangeUrl = useCallback(
-    (next: RangeKey) => {
-      const params = new URLSearchParams(searchParamsString);
-      params.set("range", next);
+  const updateRangeUrl = (next: RangeKey) => {
+    const params = new URLSearchParams(searchParamsString);
+    params.set("range", next);
 
-      const nextQuery = params.toString();
-      if (nextQuery !== searchParamsString) {
-        router.replace(`${pathname}?${nextQuery}`, { scroll: false });
-      }
-    },
-    [pathname, router, searchParamsString]
-  );
+    const nextQuery = params.toString();
+    if (nextQuery !== searchParamsString) {
+      router.replace(`${pathname}?${nextQuery}`, { scroll: false });
+    }
+  };
 
   const handleRangeChange = (next: RangeKey) => {
     setRange(next);
@@ -238,9 +250,18 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-[14px] font-semibold tracking-[0.01em] text-[#191c1e]">
-            <Icon name="sync" className="text-[18px] text-[#434653]" />
-            <span>Last updated: 08:42 AM</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportActions
+              title="Dashboard"
+              shareUrl={`${typeof window !== "undefined" ? window.location.origin : ""}${pathname}?range=${range}`}
+            />
+            <button
+              type="button"
+              onClick={() => setInsightOpen(true)}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c3c6d5] bg-white px-4 text-[14px] font-semibold text-[#191c1e] transition hover:bg-[#f2f4f6]"
+            >
+              Why this recommendation?
+            </button>
           </div>
         </div>
 
@@ -314,80 +335,106 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex h-full flex-col rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                Urgent Alerts
-              </h2>
-              <button
-                type="button"
-                onClick={openClearAlertsConfirm}
-                className="text-[15px] font-medium text-[#003c90] hover:underline"
-              >
-                Clear all
-              </button>
-            </div>
-
-            <div className="mt-5 flex flex-1 flex-col gap-4">
-              {visibleAlerts.length ? (
-                visibleAlerts.map((alert) => (
-                  <div
-                    key={alert.title}
-                    className="rounded-[14px] bg-[#f2f4f6] px-5 py-5"
-                    style={{
-                      borderLeftWidth: "4px",
-                      borderLeftStyle: "solid",
-                      borderLeftColor:
-                        alert.tone === "red"
-                          ? "#ba1a1a"
-                          : alert.tone === "blue"
-                            ? "#1d59c1"
-                            : "#737784",
-                    }}
-                  >
+          <div className="flex h-full flex-col gap-7">
+            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                Live activity
+              </div>
+              <div className="mt-4 space-y-3">
+                {dashboardActivity.map((item) => (
+                  <div key={item.id} className="rounded-[14px] bg-[#f8fafc] p-3">
                     <div className="flex items-start gap-3">
-                      <div
-                        className="mt-0.5 shrink-0"
-                        style={{
-                          color:
-                            alert.tone === "red"
-                              ? "#ba1a1a"
-                              : alert.tone === "blue"
-                                ? "#1d59c1"
-                                : "#737784",
-                        }}
-                      >
-                        <Icon name={alert.icon} className="text-[20px]" />
-                      </div>
-
+                      <ActivityToneDot tone={item.tone} />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[15px] font-semibold leading-5.5 tracking-[-0.01em] text-[#191c1e]">
-                          {alert.title}
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-[14px] font-semibold text-[#191c1e]">{item.title}</div>
+                            <p className="mt-1 text-[13px] leading-5 text-[#434653]">{item.detail}</p>
+                          </div>
+                          <span className="text-[12px] font-semibold text-[#737784]">{item.time}</span>
                         </div>
-                        <p className="mt-2 text-[15px] leading-6.5 text-[#434653]">
-                          {alert.detail}
-                        </p>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDismissAlert(alert.title)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#737784] hover:bg-white/70 hover:text-[#191c1e]"
-                        aria-label={`Dismiss ${alert.title}`}
-                      >
-                        <Icon name="close" className="text-[18px]" />
-                      </button>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0e3e5] bg-[#fafbfc] px-6 py-10 text-center">
-                  <div className="text-[16px] font-semibold text-[#191c1e]">No active alerts</div>
-                  <p className="mt-2 text-[14px] leading-5.5 text-[#434653]">
-                    Everything is stable right now. New signals will appear here automatically.
-                  </p>
-                </div>
-              )}
+                ))}
+              </div>
+            </div>
+
+            <div className="flex h-full flex-col rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
+                  Urgent Alerts
+                </h2>
+                <button
+                  type="button"
+                  onClick={openClearAlertsConfirm}
+                  className="text-[15px] font-medium text-[#003c90] hover:underline"
+                >
+                  Clear all
+                </button>
+              </div>
+
+              <div className="mt-5 flex flex-1 flex-col gap-4">
+                {visibleAlerts.length ? (
+                  visibleAlerts.map((alert) => (
+                    <div
+                      key={alert.title}
+                      className="rounded-[14px] bg-[#f2f4f6] px-5 py-5"
+                      style={{
+                        borderLeftWidth: "4px",
+                        borderLeftStyle: "solid",
+                        borderLeftColor:
+                          alert.tone === "red"
+                            ? "#ba1a1a"
+                            : alert.tone === "blue"
+                              ? "#1d59c1"
+                              : "#737784",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="mt-0.5 shrink-0"
+                          style={{
+                            color:
+                              alert.tone === "red"
+                                ? "#ba1a1a"
+                                : alert.tone === "blue"
+                                  ? "#1d59c1"
+                                  : "#737784",
+                          }}
+                        >
+                          <Icon name={alert.icon} className="text-[20px]" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[15px] font-semibold leading-5.5 tracking-[-0.01em] text-[#191c1e]">
+                            {alert.title}
+                          </div>
+                          <p className="mt-2 text-[15px] leading-6.5 text-[#434653]">
+                            {alert.detail}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDismissAlert(alert.title)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#737784] hover:bg-white/70 hover:text-[#191c1e]"
+                          aria-label={`Dismiss ${alert.title}`}
+                        >
+                          <Icon name="close" className="text-[18px]" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0e3e5] bg-[#fafbfc] px-6 py-10 text-center">
+                    <div className="text-[16px] font-semibold text-[#191c1e]">No active alerts</div>
+                    <p className="mt-2 text-[14px] leading-5.5 text-[#434653]">
+                      Everything is stable right now. New signals will appear here automatically.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -462,7 +509,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={openApplyRecommendationConfirm}
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+                    className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white transition hover:bg-[#0f52ba]"
                   >
                     Apply Recommendation
                   </button>
@@ -489,7 +536,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={openApplyRecommendationConfirm}
-                className="w-full rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+                className="w-full rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white transition hover:bg-[#0f52ba]"
               >
                 {isRecommendationApplied ? "Recommendation Applied" : "Review and Apply"}
               </button>
@@ -497,7 +544,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => appToast.message({ title: "Opening portfolio report" })}
-                className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+                className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] transition hover:bg-[#f2f4f6]"
               >
                 Open Portfolio Report
               </button>
@@ -505,7 +552,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => appToast.message({ title: "Export started" })}
-                className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+                className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] transition hover:bg-[#f2f4f6]"
               >
                 Export Summary
               </button>
@@ -522,6 +569,12 @@ export default function DashboardPage() {
         danger={confirmActionCopy?.danger ?? false}
         onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirm}
+      />
+
+      <InsightDrawer
+        open={insightOpen}
+        onOpenChange={setInsightOpen}
+        insight={recommendationInsight}
       />
     </DashboardLayout>
   );

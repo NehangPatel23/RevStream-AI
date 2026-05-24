@@ -28,7 +28,7 @@ export const recommendations = [
     property: "Azure Cove Resort",
     dates: "Oct 12 - Oct 14",
     currentPrice: "$450",
-    recommendedPrice: "$585",
+    recommendedPrice: "$510",
     confidence: 92,
     primaryDriver: "Local event announcement (Coastal Music Festival) detected.",
     marketContext: "20% surge in neighborhood search velocity over the last 6 hours.",

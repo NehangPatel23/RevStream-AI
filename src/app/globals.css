@@ -131,3 +131,29 @@ body {
   background: #e0e3e5;
   color: #003c90;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+*:focus-visible {
+  outline: 2px solid #003c90;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rev-fade-in {
+    animation: revFadeIn 180ms ease-out;
+  }
+}
+
+@keyframes revFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
