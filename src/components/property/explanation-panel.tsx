@@ -117,7 +117,7 @@ export function ExplanationPanel({
   const variance = `${currentRate} → ${recommendedRate}`;
 
   return (
-    <div className="fixed inset-0 z-[90]">
+    <div className="fixed inset-0 z-90">
       <div
         className={cn(
           "absolute inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity duration-200",
@@ -133,13 +133,13 @@ export function ExplanationPanel({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         className={cn(
-          "absolute right-0 top-0 flex h-full w-full max-w-[780px] flex-col border-l border-[#e0e3e5] bg-[#f8fafc] shadow-[0_24px_80px_rgba(0,0,0,0.24)] transition-transform duration-200 ease-out",
+          "absolute right-0 top-0 flex h-full w-full max-w-195 flex-col border-l border-[#e0e3e5] bg-[#f8fafc] shadow-[0_24px_80px_rgba(0,0,0,0.24)] transition-transform duration-200 ease-out",
           open ? "translate-x-0" : "translate-x-4"
         )}
       >
         <div className="flex items-center justify-between gap-4 border-b border-[#e0e3e5] bg-white px-6 py-5">
           <div className="min-w-0">
-            <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#737784]">
+            <div className="text-[12px] font-semibold uppercase tracking-widest text-[#737784]">
               AI explanation
             </div>
             <h2
@@ -169,7 +169,7 @@ export function ExplanationPanel({
             <section className="rounded-[20px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.04)]">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#737784]">
+                  <div className="text-[12px] font-semibold uppercase tracking-widest text-[#737784]">
                     Model summary
                   </div>
                   <p className="mt-2 text-[15px] leading-6 text-[#191c1e]">{summary}</p>
@@ -181,8 +181,8 @@ export function ExplanationPanel({
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[16px] border border-[#e0e3e5] bg-[#f8fafc] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#737784]">
+                <div className="rounded-2xl border border-[#e0e3e5] bg-[#f8fafc] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-widest text-[#737784]">
                     Current rate
                   </div>
                   <div className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#191c1e]">
@@ -190,8 +190,8 @@ export function ExplanationPanel({
                   </div>
                 </div>
 
-                <div className="rounded-[16px] border border-[#e0e3e5] bg-[#f8fafc] p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#737784]">
+                <div className="rounded-2xl border border-[#e0e3e5] bg-[#f8fafc] p-4">
+                  <div className="text-[12px] font-semibold uppercase tracking-widest text-[#737784]">
                     Recommended
                   </div>
                   <div className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-[#003c90]">
@@ -200,7 +200,7 @@ export function ExplanationPanel({
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-[16px] bg-[#f2f4f6] px-4 py-3">
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-[#f2f4f6] px-4 py-3">
                 <span className="text-[14px] font-medium text-[#434653]">Rate movement</span>
                 <span className="text-[14px] font-semibold text-[#1d59c1]">{variance}</span>
               </div>

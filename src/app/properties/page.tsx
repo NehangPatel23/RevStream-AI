@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ExportActions } from "@/components/shared/export-actions";
@@ -86,15 +86,23 @@ export default function PropertiesPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const initialQuery = searchParams.get("q") ?? "";
-  const initialMarket = searchParams.get("market") ?? "all";
-  const initialSort = searchParams.get("sort") ?? "recommendation";
-  const initialCompare = (searchParams.get("compare") ?? "").split(",").filter(Boolean);
+  const searchParamsString = searchParams.toString();
 
-  const [query, setQuery] = useState(initialQuery);
-  const [market, setMarket] = useState(initialMarket);
-  const [sort, setSort] = useState(initialSort);
-  const [compareIds, setCompareIds] = useState<string[]>(initialCompare);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [market, setMarket] = useState(searchParams.get("market") ?? "all");
+  const [sort, setSort] = useState(searchParams.get("sort") ?? "recommendation");
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setIsHydrated(true);
+
+    const nextCompare = (searchParams.get("compare") ?? "")
+      .split(",")
+      .filter(Boolean);
+
+    setCompareIds(nextCompare);
+  }, [searchParamsString, searchParams]);
 
   const updateUrl = (next: { q?: string; market?: string; sort?: string; compare?: string[] }) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -164,6 +172,10 @@ export default function PropertiesPage() {
     });
   };
 
+  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}${pathname}${
+    searchParamsString ? `?${searchParamsString}` : ""
+  }`;
+
   return (
     <DashboardLayout>
       <section className="flex flex-col gap-3">
@@ -177,10 +189,7 @@ export default function PropertiesPage() {
             </p>
           </div>
 
-          <ExportActions
-            title="Portfolio"
-            shareUrl={`${typeof window !== "undefined" ? window.location.origin : ""}${pathname}`}
-          />
+          <ExportActions title="Portfolio" shareUrl={shareUrl} />
         </div>
 
         <div className="grid gap-3 rounded-[18px] border border-[#e0e3e5] bg-white p-4 md:grid-cols-3">
@@ -222,7 +231,9 @@ export default function PropertiesPage() {
         </div>
       </section>
 
-      {compareItems.length ? <PropertyCompare items={compareItems} onRemove={removeCompare} /> : null}
+      {isHydrated && compareItems.length ? (
+        <PropertyCompare items={compareItems} onRemove={removeCompare} />
+      ) : null}
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((property) => {

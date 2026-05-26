@@ -168,20 +168,20 @@ export function CommandPalette({ open, onOpenChange, actions }: CommandPalettePr
   const sections = [...grouped, ...extraGroups];
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-100">
       <div
         className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
         aria-hidden="true"
         onClick={() => onOpenChange(false)}
       />
 
-      <div className="relative mx-auto mt-[8vh] w-full max-w-[820px] px-4">
+      <div className="relative mx-auto mt-[8vh] w-full max-w-205 px-4">
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Command palette"
           className={cn(
-            "overflow-hidden rounded-[24px] border border-[#e0e3e5] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.22)] transition-all duration-200",
+            "overflow-hidden rounded-3xl border border-[#e0e3e5] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.22)] transition-all duration-200",
             open ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
           )}
         >
@@ -267,14 +267,14 @@ export function CommandPalette({ open, onOpenChange, actions }: CommandPalettePr
                 ))}
               </div>
             ) : (
-              <div className="flex min-h-[280px] flex-col items-center justify-center rounded-[20px] border border-dashed border-[#e0e3e5] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f8fafc_60%,#eef2f7_100%)] px-6 text-center">
+              <div className="flex min-h-70 flex-col items-center justify-center rounded-[20px] border border-dashed border-[#e0e3e5] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f8fafc_60%,#eef2f7_100%)] px-6 text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
                   <Icon name="search" className="text-[28px] text-[#003c90]" />
                 </div>
                 <h3 className="mt-4 text-[22px] font-semibold tracking-[-0.02em] text-[#191c1e]">
                   No matches
                 </h3>
-                <p className="mt-2 max-w-[340px] text-[14px] leading-6 text-[#434653]">
+                <p className="mt-2 max-w-85 text-[14px] leading-6 text-[#434653]">
                   Try a property name, a page, or an action like recommendation, rules, or export.
                 </p>
               </div>

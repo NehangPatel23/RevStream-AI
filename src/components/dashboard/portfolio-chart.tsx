@@ -94,7 +94,7 @@ function PortfolioTooltip({ active, payload, label }: PortfolioTooltipProps) {
 
 export function PortfolioChart({ data }: { data: readonly Point[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(typeof window !== "undefined");
 
   const chartData = useMemo(
     () =>
@@ -109,36 +109,8 @@ export function PortfolioChart({ data }: { data: readonly Point[] }) {
     [data]
   );
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    let rafId = 0;
-
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        setIsReady(true);
-      }
-    };
-
-    measure();
-
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(rafId);
-      rafId = window.requestAnimationFrame(measure);
-    });
-
-    observer.observe(el);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      observer.disconnect();
-    };
-  }, []);
-
   return (
-    <div ref={containerRef} className="h-75 w-full min-w-0 overflow-visible">
+    <div ref={containerRef} className="h-65 w-full min-w-0 overflow-visible">
       {isReady ? (
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart data={chartData} margin={{ top: 18, right: 24, left: 24, bottom: 34 }}>

@@ -7,11 +7,23 @@ import { Menu, Search } from "lucide-react";
 import { appToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { CommandPalette, type CommandPaletteAction } from "@/components/app-shell/app-command-palette";
+import { NotificationCenter } from "@/components/app-shell/notification-center";
 
 type NavItem = {
   label: string;
   href: string;
   icon: string;
+};
+
+type LayoutNotification = {
+  id: string;
+  title: string;
+  description: string;
+  severity: "info" | "success" | "warning" | "critical";
+  unread: boolean;
+  time: string;
+  href?: string;
+  actionLabel?: string;
 };
 
 const navItems: NavItem[] = [
@@ -22,6 +34,39 @@ const navItems: NavItem[] = [
   { label: "Alerts", href: "/alerts", icon: "notifications" },
   { label: "Reports", href: "/reports", icon: "bar_chart" },
   { label: "Settings", href: "/settings", icon: "settings" },
+];
+
+const initialNotifications: LayoutNotification[] = [
+  {
+    id: "notif-1",
+    title: "Price gap detected",
+    description: "Oceanfront Suite is running below comp set average for the weekend.",
+    severity: "critical",
+    unread: true,
+    time: "2m ago",
+    href: "/properties/mia-772-os",
+    actionLabel: "Review property",
+  },
+  {
+    id: "notif-2",
+    title: "Recommendation updated",
+    description: "A new seasonal weighting has been applied to the dashboard recommendation.",
+    severity: "info",
+    unread: true,
+    time: "18m ago",
+    href: "/dashboard?panel=explanation",
+    actionLabel: "Explain",
+  },
+  {
+    id: "notif-3",
+    title: "Export ready",
+    description: "Your latest portfolio export is ready to download.",
+    severity: "success",
+    unread: false,
+    time: "1h ago",
+    href: "/properties",
+    actionLabel: "Open portfolio",
+  },
 ];
 
 function Icon({ name, className }: { name: string; className?: string }) {
@@ -37,6 +82,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<LayoutNotification[]>(initialNotifications);
 
   const isActive = useMemo(() => {
     return (href: string) => {
@@ -188,6 +235,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     setCommandPaletteOpen(false);
   }, [pathname]);
 
+  const handleMarkRead = (id: string) => {
+    setNotifications((current) =>
+      current.map((item) => (item.id === id ? { ...item, unread: false } : item))
+    );
+  };
+
+  const handleDismiss = (id: string) => {
+    setNotifications((current) => current.filter((item) => item.id !== id));
+  };
+
+  const handleDismissAll = () => {
+    setNotifications([]);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8fafc] text-[#191c1e]">
       <aside
@@ -310,10 +371,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-5">
             <button
               type="button"
+              onClick={() => setNotificationsOpen(true)}
               className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-[#191c1e] hover:bg-[#eceef0]"
+              aria-label="Open notifications"
             >
               <Icon name="notifications" className="text-[24px]" />
-              <span className="absolute right-2.75 top-2.75 h-2 w-2 rounded-full bg-[#ba1a1a]" />
+              {notifications.some((item) => item.unread) ? (
+                <span className="absolute right-2.75 top-2.75 h-2 w-2 rounded-full bg-[#ba1a1a]" />
+              ) : null}
             </button>
             <button
               type="button"
@@ -333,6 +398,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
         actions={commandActions}
+      />
+
+      <NotificationCenter
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+        notifications={notifications as never}
+        onMarkRead={handleMarkRead}
+        onDismiss={handleDismiss}
+        onDismissAll={handleDismissAll}
       />
     </div>
   );

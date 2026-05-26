@@ -357,274 +357,301 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        <section className="grid items-stretch gap-7 xl:grid-cols-[1.45fr_1fr]">
-          <div className="flex h-full flex-col rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                  Performance Trends
-                </h2>
-                <p className="mt-2 text-[15px] leading-6 text-[#434653]">
-                  Track actual ADR versus target ADR and identify movement over time.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-4 text-[14px] font-medium text-[#434653]">
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-0.5 w-3 border-t-2 border-solid border-[#003c90]" />
-                  Actual ADR
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-0.5 w-3 border-t-2 border-dashed border-[#c3c6d5]" />
-                  Target ADR
-                </span>
-
-                <div ref={rangeRef} className="relative z-20" data-range-dropdown>
-                  <button
-                    type="button"
-                    onClick={() => setIsRangeOpen((v) => !v)}
-                    className="inline-flex items-center gap-2 rounded-[10px] bg-[#f2f4f6] px-4 py-2 text-[14px] text-[#191c1e]"
-                    aria-expanded={isRangeOpen}
-                    aria-haspopup="menu"
-                  >
-                    {formatRangeLabel(range)}
-                    <Icon name="expand_more" className="text-[18px]" />
-                  </button>
-
-                  {isRangeOpen ? (
-                    <div
-                      role="menu"
-                      className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-[#e0e3e5] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
-                    >
-                      {RANGE_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleRangeChange(option.value)}
-                          className={cx(
-                            "block w-full px-4 py-3 text-left text-[14px] transition hover:bg-[#f2f4f6]",
-                            option.value === range ? "font-semibold text-[#003c90]" : "text-[#191c1e]"
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 h-115 min-w-0">
-              <PortfolioChart data={visiblePortfolioSeries} />
-            </div>
-          </div>
-
-          <div className="flex h-full flex-col rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                Urgent Alerts
-              </h2>
-              <button
-                type="button"
-                onClick={openClearAlertsConfirm}
-                className="text-[15px] font-medium text-[#003c90] hover:underline"
-              >
-                Clear all
-              </button>
-            </div>
-
-            <div className="mt-5 flex flex-1 flex-col gap-4">
-              {visibleAlerts.length ? (
-                visibleAlerts.map((alert) => (
-                  <div
-                    key={alert.title}
-                    className="rounded-[14px] bg-[#f2f4f6] px-5 py-5"
-                    style={{
-                      borderLeftWidth: "4px",
-                      borderLeftStyle: "solid",
-                      borderLeftColor:
-                        alert.tone === "red"
-                          ? "#ba1a1a"
-                          : alert.tone === "blue"
-                            ? "#1d59c1"
-                            : "#737784",
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="mt-0.5 shrink-0"
-                        style={{
-                          color:
-                            alert.tone === "red"
-                              ? "#ba1a1a"
-                              : alert.tone === "blue"
-                                ? "#1d59c1"
-                                : "#737784",
-                        }}
-                      >
-                        <Icon name={alert.icon} className="text-[20px]" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[15px] font-semibold leading-5.5 tracking-[-0.01em] text-[#191c1e]">
-                          {alert.title}
-                        </div>
-                        <p className="mt-2 text-[15px] leading-6.5 text-[#434653]">
-                          {alert.detail}
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDismissAlert(alert.title)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#737784] hover:bg-white/70 hover:text-[#191c1e]"
-                        aria-label={`Dismiss ${alert.title}`}
-                      >
-                        <Icon name="close" className="text-[18px]" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0e3e5] bg-[#fafbfc] px-6 py-10 text-center">
-                  <div className="text-[16px] font-semibold text-[#191c1e]">No active alerts</div>
-                  <p className="mt-2 text-[14px] leading-5.5 text-[#434653]">
-                    Everything is stable right now. New signals will appear here automatically.
+        <section className="grid items-start gap-7 xl:grid-cols-[1.45fr_1fr]">
+          <div className="flex self-start flex-col gap-6">
+            <div className="flex flex-col rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
+                    Performance Trends
+                  </h2>
+                  <p className="mt-2 text-[15px] leading-6 text-[#434653]">
+                    Track actual ADR versus target ADR and identify movement over time.
                   </p>
                 </div>
-              )}
+
+                <div className="flex items-center gap-4 text-[14px] font-medium text-[#434653]">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-0.5 w-3 border-t-2 border-solid border-[#003c90]" />
+                    Actual ADR
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-0.5 w-3 border-t-2 border-dashed border-[#c3c6d5]" />
+                    Target ADR
+                  </span>
+
+                  <div ref={rangeRef} className="relative z-20" data-range-dropdown>
+                    <button
+                      type="button"
+                      onClick={() => setIsRangeOpen((v) => !v)}
+                      className="inline-flex items-center gap-2 rounded-[10px] bg-[#f2f4f6] px-4 py-2 text-[14px] text-[#191c1e]"
+                      aria-expanded={isRangeOpen}
+                      aria-haspopup="menu"
+                    >
+                      {formatRangeLabel(range)}
+                      <Icon name="expand_more" className="text-[18px]" />
+                    </button>
+
+                    {isRangeOpen ? (
+                      <div
+                        role="menu"
+                        className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-[#e0e3e5] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+                      >
+                        {RANGE_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => handleRangeChange(option.value)}
+                            className={cx(
+                              "block w-full px-4 py-3 text-left text-[14px] transition hover:bg-[#f2f4f6]",
+                              option.value === range ? "font-semibold text-[#003c90]" : "text-[#191c1e]"
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 min-w-0">
+                <PortfolioChart data={visiblePortfolioSeries} />
+              </div>
+            </div>
+
+            <div className="self-start rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
+                      Algorithmic Recommendation
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setExplanationOpen(true)}
+                      className="inline-flex h-9 items-center rounded-full border border-[#c3c6d5] px-3 text-[13px] font-semibold text-[#191c1e] transition hover:bg-[#f2f4f6]"
+                    >
+                      Why this recommendation?
+                    </button>
+                  </div>
+
+                  <p className="mt-2 text-[15px] leading-6 text-[#434653]">
+                    {recommendation.title}
+                  </p>
+                </div>
+
+                <div className="lg:ml-auto">
+                  <span className="relative top-0.5 inline-flex items-center justify-center rounded-[10px] border border-[#c3d5f7] bg-[#d0e1fb] px-4 py-3 text-[13px] font-medium leading-none text-[#1d59c1]">
+                    <Icon name="verified" className="mr-2 text-[18px] leading-none" />
+                    {recommendation.confidence}% Confidence
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-[#e0e3e5] pt-6">
+                <div className="grid gap-6 xl:grid-cols-[1fr_280px] xl:items-start">
+                  <div>
+                    <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                      Primary Drivers
+                    </div>
+
+                    <div className="mt-4 space-y-4">
+                      <div className="flex gap-3">
+                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0e1fb] text-[#003c90]">
+                          <Icon name="event" className="text-[16px]" />
+                        </div>
+                        <div className="text-[14px] leading-5.5 text-[#191c1e]">
+                          <span className="font-semibold">Local Event:</span> {recommendation.primaryDriver}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0e1fb] text-[#003c90]">
+                          <Icon name="speed" className="text-[16px]" />
+                        </div>
+                        <div className="text-[14px] leading-5.5 text-[#191c1e]">
+                          <span className="font-semibold">Market Context:</span> {recommendation.marketContext}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0e1fb] text-[#003c90]">
+                          <Icon name="inventory_2" className="text-[16px]" />
+                        </div>
+                        <div className="text-[14px] leading-5.5 text-[#191c1e]">
+                          <span className="font-semibold">Competitive Set:</span> {recommendation.competitiveSet}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-[#eceef0] p-6 text-center">
+                    <div className="text-[14px] font-medium text-[#434653]">Suggested Rate</div>
+                    <div className="mt-2 text-[44px] font-bold leading-none tracking-tighter text-[#191c1e]">
+                      {isRecommendationApplied ? "$510" : recommendation.recommendedPrice}
+                    </div>
+                    <div className="mt-2 text-[15px] font-medium text-[#1d59c1]">
+                      {isRecommendationApplied
+                        ? "Applied to selected dates"
+                        : getRecommendationDelta(
+                            recommendation.currentPrice,
+                            recommendation.recommendedPrice
+                          )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={openApplyRecommendationConfirm}
+                      className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+                    >
+                      Apply Recommendation
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </section>
 
-        <section className="grid items-start gap-6 xl:grid-cols-[1.45fr_1fr]">
-          <div className="self-start rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                    Algorithmic Recommendation
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => setExplanationOpen(true)}
-                    className="inline-flex h-9 items-center rounded-full border border-[#c3c6d5] px-3 text-[13px] font-semibold text-[#191c1e] transition hover:bg-[#f2f4f6]"
-                  >
-                    Why this recommendation?
-                  </button>
-                </div>
-
-                <p className="mt-2 text-[15px] leading-6 text-[#434653]">
-                  {recommendation.title}
-                </p>
+          <div className="flex self-start flex-col gap-7">
+            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
+                Live activity
               </div>
 
-              <div className="lg:ml-auto">
-                <span className="relative top-0.5 inline-flex items-center justify-center rounded-[10px] border border-[#c3d5f7] bg-[#d0e1fb] px-4 py-3 text-[13px] font-medium leading-none text-[#1d59c1]">
-                  <Icon name="verified" className="mr-2 text-[18px] leading-none" />
-                  {recommendation.confidence}% Confidence
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-[#e0e3e5] pt-6">
-              <div className="grid gap-6 xl:grid-cols-[1fr_280px] xl:items-start">
-                <div>
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#434653]">
-                    Primary Drivers
+              <div className="mt-4 flex min-h-28 items-center justify-center rounded-2xl border border-dashed border-[#e0e3e5] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f8fafc_60%,#eef2f7_100%)] px-4 py-6 text-center">
+                <div className="max-w-60">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
+                    <Icon name="insights" className="text-[24px] text-[#003c90]" />
                   </div>
-
-                  <div className="mt-4 space-y-4">
-                    <div className="flex gap-3">
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0e1fb] text-[#003c90]">
-                        <Icon name="event" className="text-[16px]" />
-                      </div>
-                      <div className="text-[14px] leading-5.5 text-[#191c1e]">
-                        <span className="font-semibold">Local Event:</span> {recommendation.primaryDriver}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0e1fb] text-[#003c90]">
-                        <Icon name="speed" className="text-[16px]" />
-                      </div>
-                      <div className="text-[14px] leading-5.5 text-[#191c1e]">
-                        <span className="font-semibold">Market Context:</span> {recommendation.marketContext}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d0e1fb] text-[#003c90]">
-                        <Icon name="inventory_2" className="text-[16px]" />
-                      </div>
-                      <div className="text-[14px] leading-5.5 text-[#191c1e]">
-                        <span className="font-semibold">Competitive Set:</span> {recommendation.competitiveSet}
-                      </div>
-                    </div>
+                  <div className="mt-3 text-[15px] font-semibold text-[#191c1e]">
+                    No recent activity
                   </div>
-                </div>
-
-                <div className="rounded-2xl bg-[#eceef0] p-6 text-center">
-                  <div className="text-[14px] font-medium text-[#434653]">Suggested Rate</div>
-                  <div className="mt-2 text-[44px] font-bold leading-none tracking-tighter text-[#191c1e]">
-                    {isRecommendationApplied ? "$510" : recommendation.recommendedPrice}
-                  </div>
-                  <div className="mt-2 text-[15px] font-medium text-[#1d59c1]">
-                    {isRecommendationApplied ? "Applied to selected dates" : getRecommendationDelta(recommendation.currentPrice, recommendation.recommendedPrice)}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={openApplyRecommendationConfirm}
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
-                  >
-                    Apply Recommendation
-                  </button>
+                  <p className="mt-1 text-[13px] leading-5 text-[#434653]">
+                    New booking, pricing, and alert updates will appear here automatically.
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-6 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
-                Action Center
-              </h2>
-              <button
-                type="button"
-                onClick={() => appToast.message({ title: "Action center opened" })}
-                className="text-[15px] font-medium text-[#003c90] hover:underline"
-              >
-                View all
-              </button>
+            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
+                  Urgent Alerts
+                </h2>
+                <button
+                  type="button"
+                  onClick={openClearAlertsConfirm}
+                  className="text-[15px] font-medium text-[#003c90] hover:underline"
+                >
+                  Clear all
+                </button>
+              </div>
+
+              <div className="mt-5 flex flex-1 flex-col gap-4">
+                {visibleAlerts.length ? (
+                  visibleAlerts.map((alert) => (
+                    <div
+                      key={alert.title}
+                      className="rounded-[14px] bg-[#f2f4f6] px-5 py-5"
+                      style={{
+                        borderLeftWidth: "4px",
+                        borderLeftStyle: "solid",
+                        borderLeftColor:
+                          alert.tone === "red"
+                            ? "#ba1a1a"
+                            : alert.tone === "blue"
+                              ? "#1d59c1"
+                              : "#737784",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="mt-0.5 shrink-0"
+                          style={{
+                            color:
+                              alert.tone === "red"
+                                ? "#ba1a1a"
+                                : alert.tone === "blue"
+                                  ? "#1d59c1"
+                                  : "#737784",
+                          }}
+                        >
+                          <Icon name={alert.icon} className="text-[20px]" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[15px] font-semibold leading-5.5 tracking-[-0.01em] text-[#191c1e]">
+                            {alert.title}
+                          </div>
+                          <p className="mt-2 text-[15px] leading-6.5 text-[#434653]">
+                            {alert.detail}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDismissAlert(alert.title)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#737784] hover:bg-white/70 hover:text-[#191c1e]"
+                          aria-label={`Dismiss ${alert.title}`}
+                        >
+                          <Icon name="close" className="text-[18px]" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-[#e0e3e5] bg-[#fafbfc] px-6 py-10 text-center">
+                    <div className="text-[16px] font-semibold text-[#191c1e]">No active alerts</div>
+                    <p className="mt-2 text-[14px] leading-5.5 text-[#434653]">
+                      Everything is stable right now. New signals will appear here automatically.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="mt-5 space-y-4">
-              <button
-                type="button"
-                onClick={openApplyRecommendationConfirm}
-                className="w-full rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
-              >
-                {isRecommendationApplied ? "Recommendation Applied" : "Review and Apply"}
-              </button>
+            <div className="rounded-[18px] border border-[#e0e3e5] bg-white p-5 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-[#191c1e]">
+                  Action Center
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => appToast.message({ title: "Action center opened" })}
+                  className="text-[15px] font-medium text-[#003c90] hover:underline"
+                >
+                  View all
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => appToast.message({ title: "Opening portfolio report" })}
-                className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
-              >
-                Open Portfolio Report
-              </button>
+              <div className="mt-5 space-y-4">
+                <button
+                  type="button"
+                  onClick={openApplyRecommendationConfirm}
+                  className="w-full rounded-[10px] bg-[#003c90] px-4 py-3 text-[14px] font-medium text-white hover:bg-[#0f52ba]"
+                >
+                  {isRecommendationApplied ? "Recommendation Applied" : "Review and Apply"}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => appToast.message({ title: "Export started" })}
-                className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
-              >
-                Export Summary
-              </button>
+                <button
+                  type="button"
+                  onClick={() => appToast.message({ title: "Opening portfolio report" })}
+                  className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+                >
+                  Open Portfolio Report
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => appToast.message({ title: "Export started" })}
+                  className="w-full rounded-[10px] border border-[#737784] bg-white px-4 py-3 text-[14px] font-medium text-[#191c1e] hover:bg-[#f2f4f6]"
+                >
+                  Export Summary
+                </button>
+              </div>
             </div>
           </div>
         </section>
