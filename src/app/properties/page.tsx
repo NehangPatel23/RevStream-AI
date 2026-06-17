@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ExportActions } from "@/components/shared/export-actions";
 import { PropertyCompare } from "@/components/shared/property-compare";
 import { comparisonRows } from "@/lib/app-shell";
@@ -81,7 +82,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function PropertiesPage() {
+function PropertiesPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -307,5 +308,19 @@ export default function PropertiesPage() {
         })}
       </section>
     </DashboardLayout>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <PageSkeleton cardCount={4} showLargePanel={false} showSidePanel={false} />
+        </DashboardLayout>
+      }
+    >
+      <PropertiesPageContent />
+    </Suspense>
   );
 }

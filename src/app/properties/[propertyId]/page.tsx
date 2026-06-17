@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -1294,7 +1295,7 @@ function buildTrendRows(point: TrendPoint) {
   ];
 }
 
-export default function PropertyDetailPage() {
+function PropertyDetailPageContent() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2294,6 +2295,20 @@ export default function PropertyDetailPage() {
         ) : null}
       </Drawer>
     </DashboardLayout>
+  );
+}
+
+export default function PropertyDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <PageSkeleton cardCount={3} />
+        </DashboardLayout>
+      }
+    >
+      <PropertyDetailPageContent />
+    </Suspense>
   );
 }
 

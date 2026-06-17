@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -103,7 +103,7 @@ function ActivityToneDot({ tone }: { tone: "info" | "success" | "warning" }) {
   return <span className={cx("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", toneClass)} />;
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -685,5 +685,19 @@ export default function DashboardPage() {
         }}
       />
     </DashboardLayout>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <PageSkeleton />
+        </DashboardLayout>
+      }
+    >
+      <DashboardPageContent />
+    </Suspense>
   );
 }
